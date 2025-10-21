@@ -1,0 +1,290 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Deployment configuration
+        DEPLOY_SERVER = credentials('lab-server-host')
+        DEPLOY_USER = credentials('lab-server-user')
+        DEPLOY_PATH = '/opt/lab-numerator'
+        
+        // Docker configuration
+        IMAGE_NAME = 'lab-numerator'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        CONTAINER_NAME = 'lab-numerator'
+        
+        APP_NAME = 'lab-numerator'
+        BRANCH_NAME = "${env.GIT_BRANCH ?: 'main'}"
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📦 Checking out source code...'
+                checkout scm
+                
+                script {
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
+                }
+                
+                echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
+                echo "👤 Author: ${env.GIT_AUTHOR}"
+            }
+        }
+        
+        stage('Prepare Server') {
+            steps {
+                echo '🔧 Preparing deployment directory on server...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            # Create deployment directory
+                            sudo mkdir -p ${DEPLOY_PATH}
+                            sudo chown ${DEPLOY_USER}:${DEPLOY_USER} ${DEPLOY_PATH}
+                            
+                            # Verify Docker is installed
+                            if ! command -v docker &> /dev/null; then
+                                echo "❌ Docker is not installed on the server"
+                                exit 1
+                            fi
+                            
+                            # Verify docker-compose is installed
+                            if ! command -v docker-compose &> /dev/null; then
+                                echo "❌ docker-compose is not installed on the server"
+                                exit 1
+                            fi
+                            
+                            echo "✅ Docker and docker-compose are available"
+                            docker --version
+                            docker-compose --version
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Transfer Files') {
+            steps {
+                echo '📤 Transferring files to server...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        # Sync files to server
+                        rsync -avz --delete \
+                            --exclude 'node_modules' \
+                            --exclude '.git' \
+                            --exclude '.next' \
+                            --exclude 'logs' \
+                            ./ ${DEPLOY_USER}@${DEPLOY_SERVER}:${DEPLOY_PATH}/
+                        
+                        echo "✅ Files transferred successfully"
+                    """
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo '🐳 Building Docker image on server...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            cd ${DEPLOY_PATH}
+                            
+                            # Build Docker image
+                            docker-compose build --no-cache
+                            
+                            # Tag with build number
+                            docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${IMAGE_TAG}
+                            
+                            echo "✅ Docker image built successfully"
+                            docker images | grep ${IMAGE_NAME}
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Test SOAP Connectivity') {
+            steps {
+                echo '🔌 Testing SOAP service connectivity...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            cd ${DEPLOY_PATH}
+                            
+                            # Test SOAP connectivity using a temporary container
+                            docker run --rm --network host \
+                                ${IMAGE_NAME}:latest \
+                                node -e "
+                                    const axios = require(\"axios\");
+                                    axios.get(\"http://ae89:8086\", {timeout: 5000})
+                                        .then(() => console.log(\"✅ SOAP endpoint reachable\"))
+                                        .catch(e => console.log(\"⚠️  SOAP test:\", e.code));
+                                " || echo "⚠️  SOAP test failed (non-blocking)"
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🚀 Deploying with Docker Compose...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            cd ${DEPLOY_PATH}
+                            
+                            # Create .env file if it doesn't exist
+                            if [ ! -f .env ]; then
+                                cp .env.docker .env
+                                echo "📝 Created .env file from template"
+                            fi
+                            
+                            # Stop and remove old containers
+                            docker-compose down || true
+                            
+                            # Start new containers
+                            docker-compose up -d
+                            
+                            # Show status
+                            docker-compose ps
+                            
+                            echo "✅ Deployment completed"
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🏥 Performing health check...'
+                
+                script {
+                    sleep(time: 15, unit: 'SECONDS')
+                    
+                    sshagent(credentials: ['lab-server-ssh']) {
+                        sh """
+                            ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                                cd ${DEPLOY_PATH}
+                                
+                                # Check container is running
+                                if ! docker-compose ps | grep -q "Up"; then
+                                    echo "❌ Container is not running"
+                                    docker-compose logs --tail=50
+                                    exit 1
+                                fi
+                                
+                                # Check HTTP endpoint
+                                for i in {1..10}; do
+                                    if curl -sf http://localhost:3000 > /dev/null; then
+                                        echo "✅ Health check passed!"
+                                        exit 0
+                                    fi
+                                    echo "Waiting for application to start... (\$i/10)"
+                                    sleep 3
+                                done
+                                
+                                echo "❌ Health check failed after 30 seconds"
+                                docker-compose logs --tail=50
+                                exit 1
+                            '
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Cleanup Old Images') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🧹 Cleaning up old Docker images...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            # Keep only the last 3 tagged images
+                            docker images ${IMAGE_NAME} --format "{{.Tag}}" | \
+                                grep -E "^[0-9]+\$" | \
+                                sort -rn | \
+                                tail -n +4 | \
+                                xargs -I {} docker rmi ${IMAGE_NAME}:{} || true
+                            
+                            # Remove dangling images
+                            docker image prune -f || true
+                            
+                            echo "✅ Cleanup completed"
+                        '
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+            
+            script {
+                if (env.BRANCH_NAME == 'main') {
+                    echo """
+                    🎉 Deployment Successful!
+                    
+                    Branch: ${env.BRANCH_NAME}
+                    Commit: ${env.GIT_COMMIT_MSG}
+                    Author: ${env.GIT_AUTHOR}
+                    Build: #${env.BUILD_NUMBER}
+                    Image: ${IMAGE_NAME}:${IMAGE_TAG}
+                    
+                    Access: http://${DEPLOY_SERVER}:3000
+                    """
+                }
+            }
+        }
+        
+        failure {
+            echo '❌ Pipeline failed!'
+            
+            echo """
+            ⚠️  Deployment Failed!
+            
+            Branch: ${env.BRANCH_NAME}
+            Commit: ${env.GIT_COMMIT_MSG}
+            Build: #${env.BUILD_NUMBER}
+            
+            Check console output for details.
+            """
+        }
+        
+        always {
+            echo '🧹 Pipeline completed'
+        }
+    }
+}
+
