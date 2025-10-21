@@ -1,0 +1,215 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Deployment configuration
+        DEPLOY_SERVER = credentials('lab-server-host') // Configure in Jenkins credentials
+        DEPLOY_USER = credentials('lab-server-user')   // Configure in Jenkins credentials
+        DEPLOY_PATH = '/var/www/LabNumerator'
+        NODE_VERSION = '20.x'
+        
+        // Application configuration
+        APP_NAME = 'lab-numerator'
+        BRANCH_NAME = "${env.GIT_BRANCH ?: 'main'}"
+    }
+    
+    options {
+        // Keep only last 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Timeout after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        // Don't run concurrent builds
+        disableConcurrentBuilds()
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📦 Checking out source code...'
+                checkout scm
+                
+                script {
+                    // Get commit information
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
+                }
+                
+                echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
+                echo "👤 Author: ${env.GIT_AUTHOR}"
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                echo '📚 Installing dependencies...'
+                sh '''
+                    node --version
+                    yarn --version
+                    yarn install --frozen-lockfile
+                '''
+            }
+        }
+        
+        stage('Lint & Type Check') {
+            steps {
+                echo '🔍 Running linter and type checker...'
+                sh '''
+                    yarn lint || true
+                    yarn type-check
+                '''
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo '🏗️  Building Next.js application...'
+                sh '''
+                    yarn build
+                '''
+            }
+        }
+        
+        stage('Test SOAP Connectivity') {
+            steps {
+                echo '🔌 Testing SOAP service connectivity...'
+                script {
+                    // Test SOAP endpoint availability
+                    sh '''
+                        node scripts/test-soap.js || echo "⚠️  SOAP test failed (non-blocking)"
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Server') {
+            when {
+                // Only deploy on main branch
+                branch 'main'
+            }
+            steps {
+                echo '🚀 Deploying to production server...'
+                
+                sshagent(credentials: ['lab-server-ssh']) {
+                    sh """
+                        # Create deployment directory if not exists
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            mkdir -p ${DEPLOY_PATH}
+                            mkdir -p ${DEPLOY_PATH}/logs
+                        '
+                        
+                        # Sync files to server (excluding node_modules)
+                        rsync -avz --delete \
+                            --exclude 'node_modules' \
+                            --exclude '.git' \
+                            --exclude '.env.local' \
+                            --exclude '.env.*.local' \
+                            --exclude 'logs' \
+                            ./ ${DEPLOY_USER}@${DEPLOY_SERVER}:${DEPLOY_PATH}/
+                        
+                        # Install dependencies and restart on server
+                        ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            cd ${DEPLOY_PATH}
+                            
+                            # Install production dependencies
+                            yarn install --production=false --frozen-lockfile
+                            
+                            # Build if needed
+                            yarn build
+                            
+                            # Restart application with PM2
+                            pm2 delete ${APP_NAME} || true
+                            pm2 start ecosystem.config.js --env production
+                            pm2 save
+                            
+                            # Show status
+                            pm2 list
+                            pm2 info ${APP_NAME}
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🏥 Performing health check...'
+                script {
+                    // Wait for application to start
+                    sleep(time: 10, unit: 'SECONDS')
+                    
+                    // Check if application is running
+                    sshagent(credentials: ['lab-server-ssh']) {
+                        sh """
+                            ssh ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                                # Check PM2 status
+                                pm2 list | grep ${APP_NAME} | grep online || exit 1
+                                
+                                # Check if port is listening
+                                netstat -tlnp | grep :3000 || exit 1
+                                
+                                echo "✅ Health check passed!"
+                            '
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+            
+            // Optional: Send notification
+            script {
+                if (env.BRANCH_NAME == 'main') {
+                    echo """
+                    🎉 Deployment Successful!
+                    
+                    Branch: ${env.BRANCH_NAME}
+                    Commit: ${env.GIT_COMMIT_MSG}
+                    Author: ${env.GIT_AUTHOR}
+                    Build: #${env.BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+        
+        failure {
+            echo '❌ Pipeline failed!'
+            
+            // Optional: Send error notification
+            echo """
+            ⚠️  Deployment Failed!
+            
+            Branch: ${env.BRANCH_NAME}
+            Commit: ${env.GIT_COMMIT_MSG}
+            Build: #${env.BUILD_NUMBER}
+            
+            Check console output for details.
+            """
+        }
+        
+        always {
+            // Clean workspace
+            echo '🧹 Cleaning up...'
+            cleanWs(
+                deleteDirs: true,
+                patterns: [
+                    [pattern: 'node_modules', type: 'INCLUDE'],
+                    [pattern: '.next', type: 'INCLUDE']
+                ]
+            )
+        }
+    }
+}
+
