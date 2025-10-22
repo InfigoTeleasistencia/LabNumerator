@@ -1,7 +1,7 @@
 # Multi-stage build for Next.js application
 
 # Stage 1: Dependencies  
-FROM node:16.20-slim AS deps
+FROM node:18.17.0-slim AS deps
 WORKDIR /app
 
 # Copy package files
@@ -11,7 +11,7 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production=false
 
 # Stage 2: Builder
-FROM node:16.20-slim AS builder
+FROM node:18.17.0-slim AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
@@ -24,7 +24,7 @@ COPY . .
 RUN yarn build
 
 # Stage 3: Runner
-FROM node:16.20-slim AS runner
+FROM node:18.17.0-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
