@@ -3,6 +3,8 @@ import { XMLParser } from 'fast-xml-parser';
 import { ValidationResponse } from '@/types';
 
 const SOAP_URL = process.env.SOAP_URL || 'http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01';
+const SOAP_USERNAME = process.env.SOAP_USERNAME || '';
+const SOAP_PASSWORD = process.env.SOAP_PASSWORD || '';
 
 /**
  * Cliente SOAP para consultar información del paciente
@@ -27,6 +29,11 @@ export async function validateBarcodeWithSOAP(labOSNro: string): Promise<Validat
         'SOAPAction': 'labwbs01.Execute',
       },
       timeout: 10000,
+      // Autenticación HTTP Basic
+      auth: SOAP_USERNAME && SOAP_PASSWORD ? {
+        username: SOAP_USERNAME,
+        password: SOAP_PASSWORD,
+      } : undefined,
     });
 
     // Parsear la respuesta XML
@@ -102,6 +109,15 @@ export async function validateBarcodeWithSOAP(labOSNro: string): Promise<Validat
         valid: false,
         error: 'Servicio no disponible',
         errorDescription: 'No se pudo conectar con el servidor. Intente nuevamente.',
+      };
+    }
+
+    // Error de autenticación
+    if (error.response?.status === 401) {
+      return {
+        valid: false,
+        error: 'Error de autenticación',
+        errorDescription: 'Usuario o contraseña incorrectos para el servicio SOAP. Verifique las credenciales.',
       };
     }
 
