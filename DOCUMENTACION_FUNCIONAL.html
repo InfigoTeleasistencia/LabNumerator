@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Documentación Funcional - LabNumerator</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            font-size: 28pt;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            font-size: 20pt;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 5px;
+        }
+        h3 {
+            color: #004080;
+            margin-top: 20px;
+            font-size: 16pt;
+        }
+        h4 {
+            color: #666;
+            margin-top: 15px;
+            font-size: 14pt;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        th {
+            background-color: #0066cc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .feature-box {
+            background-color: #e8f4f8;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+        .step-list li {
+            counter-increment: step-counter;
+            margin: 15px 0;
+            padding-left: 40px;
+            position: relative;
+        }
+        .step-list li:before {
+            content: counter(step-counter);
+            background-color: #0066cc;
+            color: white;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 50%;
+            position: absolute;
+            left: 0;
+        }
+        .diagram {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .header-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-info">
+    <h1>Documentación Funcional<br/>Sistema LabNumerator</h1>
+    <p><strong>Versión:</strong> 1.0.0<br/>
+    <strong>Fecha:</strong> Octubre 2025<br/>
+    <strong>Organización:</strong> Infigo Teleasistencia</p>
+</div>
+
+<h2>1. Resumen Ejecutivo</h2>
+
+<p><strong>LabNumerator</strong> es un sistema web moderno diseñado para gestionar la cola de atención de pacientes en el laboratorio mediante:</p>
+
+<ul>
+    <li><strong>Registro rápido</strong> mediante escaneo de código de barras</li>
+    <li><strong>Validación automática</strong> con el sistema GXSalud mediante servicio SOAP</li>
+    <li><strong>Visualización en tiempo real</strong> de la cola de espera</li>
+    <li><strong>Gestión de múltiples sectores</strong> del laboratorio</li>
+    <li><strong>Sincronización instantánea</strong> entre todas las pantallas mediante WebSockets</li>
+</ul>
+
+<div class="success">
+    <strong>Beneficios Principales:</strong>
+    <ul>
+        <li>✅ Reducción de tiempos de espera - Proceso de registro automatizado</li>
+        <li>✅ Eliminación de errores - Validación automática con GXSalud</li>
+        <li>✅ Transparencia - Los pacientes ven su posición en tiempo real</li>
+        <li>✅ Eficiencia operativa - Gestión centralizada de múltiples sectores</li>
+        <li>✅ Sin instalación - Aplicación web accesible desde cualquier navegador</li>
+    </ul>
+</div>
+
+<h2>2. Usuarios del Sistema</h2>
+
+<table>
+    <tr>
+        <th>Tipo de Usuario</th>
+        <th>Descripción</th>
+        <th>Funciones Principales</th>
+    </tr>
+    <tr>
+        <td><strong>Paciente</strong></td>
+        <td>Persona que acude al laboratorio</td>
+        <td>Escanea código de barras, visualiza cola</td>
+    </tr>
+    <tr>
+        <td><strong>Operador de Escaneo</strong></td>
+        <td>Personal que asiste en el registro</td>
+        <td>Ayuda con el escaneo, verifica datos</td>
+    </tr>
+    <tr>
+        <td><strong>Personal de Laboratorio</strong></td>
+        <td>Técnicos y profesionales del lab</td>
+        <td>Llama pacientes, gestiona cola</td>
+    </tr>
+    <tr>
+        <td><strong>Administrador</strong></td>
+        <td>Responsable del sistema</td>
+        <td>Configuración, monitoreo, soporte</td>
+    </tr>
+</table>
+
+<h2>3. Funcionalidades Principales</h2>
+
+<h3>3.1 Registro de Pacientes</h3>
+
+<div class="feature-box">
+    <h4>Descripción</h4>
+    <p>Los pacientes registran su llegada escaneando el código de barras de su orden de laboratorio.</p>
+    
+    <h4>Proceso de Registro</h4>
+    <ol class="step-list">
+        <li>Paciente acerca código de barras al lector</li>
+        <li>Sistema captura el código automáticamente</li>
+        <li>Sistema valida con GXSalud mediante servicio SOAP</li>
+        <li>Verifica que el turno esté vigente (dentro del horario permitido)</li>
+        <li>Asigna número en cola del sector correspondiente</li>
+        <li>Muestra confirmación en pantalla con datos del paciente</li>
+    </ol>
+
+    <h4>Validaciones Automáticas</h4>
+    <ul>
+        <li>✅ El código existe en el sistema GXSalud</li>
+        <li>✅ El turno no ha vencido (hora actual &lt; hora final del turno)</li>
+        <li>✅ El paciente no está duplicado en la cola actual</li>
+        <li>✅ El sector asignado existe y está disponible</li>
+    </ul>
+
+    <h4>Tiempo de Proceso</h4>
+    <p><strong>Menos de 2 segundos promedio</strong> desde el escaneo hasta la confirmación</p>
+</div>
+
+<h3>3.2 Visualización de Cola en Tiempo Real</h3>
+
+<div class="feature-box">
+    <h4>Descripción</h4>
+    <p>Pantallas públicas muestran la cola de espera actualizada en tiempo real, separada por sectores del laboratorio.</p>
+    
+    <h4>Información Mostrada</h4>
+    <table>
+        <tr>
+            <th>Campo</th>
+            <th>Descripción</th>
+        </tr>
+        <tr>
+            <td>Número de Turno</td>
+            <td>Número secuencial asignado al paciente</td>
+        </tr>
+        <tr>
+            <td>Nombre del Paciente</td>
+            <td>Nombre completo según GXSalud</td>
+        </tr>
+        <tr>
+            <td>Sector Asignado</td>
+            <td>Sector de laboratorio donde será atendido</td>
+        </tr>
+        <tr>
+            <td>Tiempo en Cola</td>
+            <td>Minutos transcurridos desde el registro</td>
+        </tr>
+        <tr>
+            <td>Estado</td>
+            <td>En espera, Llamado, En atención</td>
+        </tr>
+    </table>
+
+    <h4>Características Técnicas</h4>
+    <ul>
+        <li><strong>Actualización automática</strong> mediante WebSockets (no requiere recargar)</li>
+        <li><strong>Vista por sector</strong> o visualización global</li>
+        <li><strong>Resaltado visual</strong> del próximo paciente a atender</li>
+        <li><strong>Transiciones suaves</strong> para mejor experiencia visual</li>
+        <li><strong>Latencia menor a 100ms</strong> en actualizaciones</li>
+    </ul>
+</div>
+
+<h3>3.3 Panel de Control del Laboratorio</h3>
+
+<div class="feature-box">
+    <h4>Descripción</h4>
+    <p>Interfaz de gestión para el personal del laboratorio que permite controlar el flujo de atención de pacientes.</p>
+    
+    <h4>Acciones Disponibles</h4>
+
+    <table>
+        <tr>
+            <th>Acción</th>
+            <th>Descripción</th>
+            <th>Resultado</th>
+        </tr>
+        <tr>
+            <td><strong>Llamar Siguiente</strong></td>
+            <td>Avanza al siguiente paciente en la cola</td>
+            <td>
+                • Notificación visual en pantallas<br/>
+                • Sonido opcional<br/>
+                • Registro de hora de llamado
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Marcar Completado</strong></td>
+            <td>Remueve paciente de la cola tras atención</td>
+            <td>
+                • Paciente sale de la cola<br/>
+                • Actualiza estadísticas<br/>
+                • Libera espacio en lista
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Saltear Paciente</strong></td>
+            <td>Pasa al siguiente si el actual no se presenta</td>
+            <td>
+                • Paciente vuelve al final<br/>
+                • Siguiente avanza
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Priorizar</strong></td>
+            <td>Adelanta un paciente específico (urgencias)</td>
+            <td>
+                • Paciente pasa al frente<br/>
+                • Registro de justificación
+            </td>
+        </tr>
+    </table>
+
+    <h4>Vista de Estado Global</h4>
+    <ul>
+        <li>Total de pacientes en espera (todos los sectores)</li>
+        <li>Distribución de pacientes por sector</li>
+        <li>Tiempo promedio de espera</li>
+        <li>Pacientes atendidos en el día</li>
+        <li>Alertas de tiempos de espera prolongados</li>
+    </ul>
+</div>
+
+<h3>3.4 Sincronización en Tiempo Real</h3>
+
+<div class="feature-box">
+    <h4>Tecnología: WebSockets (Socket.io)</h4>
+    
+    <h4>Eventos Sincronizados Automáticamente</h4>
+    <ul>
+        <li><strong>Nuevo paciente registrado</strong> → Todas las pantallas muestran el nuevo paciente</li>
+        <li><strong>Paciente llamado</strong> → Se resalta en pantallas de visualización</li>
+        <li><strong>Paciente completado</strong> → Se remueve de todas las vistas</li>
+        <li><strong>Cambios en orden</strong> → Reordenamiento reflejado instantáneamente</li>
+        <li><strong>Cambios de estado</strong> → Actualizaciones de estado en tiempo real</li>
+    </ul>
+
+    <h4>Garantías del Sistema</h4>
+    <table>
+        <tr>
+            <th>Métrica</th>
+            <th>Valor</th>
+        </tr>
+        <tr>
+            <td>Latencia de actualización</td>
+            <td>&lt; 100 milisegundos</td>
+        </tr>
+        <tr>
+            <td>Reconexión automática</td>
+            <td>Sí (tras pérdida de conexión)</td>
+        </tr>
+        <tr>
+            <td>Consistencia de estado</td>
+            <td>Garantizada en todas las pantallas</td>
+        </tr>
+        <tr>
+            <td>Máximo de clientes simultáneos</td>
+            <td>50+ conexiones</td>
+        </tr>
+    </table>
+</div>
+
+<h2>4. Flujos de Trabajo Detallados</h2>
+
+<h3>4.1 Flujo Completo de Registro de Paciente</h3>
+
+<ol class="step-list">
+    <li><strong>Paciente llega con orden de laboratorio</strong>
+        <ul>
+            <li>Orden contiene código de barras visible</li>
+            <li>Paciente se acerca a estación de escaneo</li>
+        </ul>
+    </li>
+    
+    <li><strong>Escaneo del código de barras</strong>
+        <ul>
+            <li>Paciente acerca el código al lector</li>
+            <li>Lector captura el código automáticamente</li>
+            <li>Sistema muestra "Validando..." en pantalla</li>
+        </ul>
+    </li>
+    
+    <li><strong>Validación con GXSalud (automático)</strong>
+        <ul>
+            <li>Sistema envía código al servicio SOAP de GXSalud</li>
+            <li>GXSalud verifica el código en su base de datos</li>
+            <li>Retorna datos del paciente y del turno</li>
+        </ul>
+    </li>
+    
+    <li><strong>Verificación de condiciones</strong>
+        <ul>
+            <li>¿El código existe? → Si NO: Error "Código no encontrado"</li>
+            <li>¿El turno está vigente? → Si NO: Error "Turno vencido"</li>
+            <li>¿Ya está en cola? → Si SÍ: Error "Ya registrado"</li>
+            <li>Si todas las condiciones se cumplen → Continúa</li>
+        </ul>
+    </li>
+    
+    <li><strong>Asignación a cola del sector</strong>
+        <ul>
+            <li>Sistema identifica el sector según datos de GXSalud</li>
+            <li>Asigna número secuencial en ese sector</li>
+            <li>Registra hora de llegada</li>
+        </ul>
+    </li>
+    
+    <li><strong>Notificación a todas las pantallas</strong>
+        <ul>
+            <li>Envía actualización via WebSocket</li>
+            <li>Pantallas de visualización agregan paciente a la lista</li>
+            <li>Panel de laboratorio actualiza contador</li>
+        </ul>
+    </li>
+    
+    <li><strong>Confirmación al paciente</strong>
+        <ul>
+            <li>Pantalla muestra: "✓ Registrado exitosamente"</li>
+            <li>Muestra nombre del paciente</li>
+            <li>Muestra sector asignado</li>
+            <li>Muestra número en cola</li>
+            <li>Instrucción: "Diríjase a la sala de espera del Sector X"</li>
+        </ul>
+    </li>
+</ol>
+
+<div class="note">
+    <strong>Nota:</strong> Todo el proceso toma menos de 2 segundos en condiciones normales de red.
+</div>
+
+<h3>4.2 Flujo de Atención en Laboratorio</h3>
+
+<ol class="step-list">
+    <li><strong>Personal ve la cola en el panel</strong>
+        <ul>
+            <li>Lista ordenada de pacientes en espera</li>
+            <li>Información completa de cada paciente</li>
+            <li>Tiempo de espera de cada uno</li>
+        </ul>
+    </li>
+    
+    <li><strong>Clic en "Llamar Siguiente"</strong>
+        <ul>
+            <li>Sistema selecciona el primer paciente de la cola</li>
+            <li>Cambia estado a "Llamado"</li>
+        </ul>
+    </li>
+    
+    <li><strong>Notificación automática</strong>
+        <ul>
+            <li>Nombre del paciente se resalta en pantallas públicas</li>
+            <li>Sonido opcional de notificación</li>
+            <li>Mensaje: "Sr(a). [NOMBRE], por favor pase al Sector [X]"</li>
+        </ul>
+    </li>
+    
+    <li><strong>Atención del paciente</strong>
+        <ul>
+            <li>Personal realiza extracción o procedimiento</li>
+            <li>Paciente permanece en estado "En atención"</li>
+        </ul>
+    </li>
+    
+    <li><strong>Finalización</strong>
+        <ul>
+            <li>Personal hace clic en "Completar"</li>
+            <li>Paciente se remueve de la cola</li>
+            <li>Actualización automática en todas las pantallas</li>
+            <li>Siguiente paciente avanza automáticamente</li>
+        </ul>
+    </li>
+</ol>
+
+<div class="note">
+    <strong>Situaciones Especiales:</strong>
+    <ul>
+        <li><strong>Paciente no se presenta:</strong> Usar botón "Saltear" para pasar al siguiente</li>
+        <li><strong>Paciente debe regresar:</strong> Usar "Volver a cola" para reposicionar</li>
+        <li><strong>Urgencia médica:</strong> Usar "Priorizar" para adelantar en la cola</li>
+    </ul>
+</div>
+
+<h2>5. Integración con GXSalud</h2>
+
+<h3>5.1 Descripción del Servicio SOAP</h3>
+
+<p>LabNumerator se integra con el sistema hospitalario GXSalud mediante un Web Service SOAP que provee información validada de pacientes y turnos.</p>
+
+<table>
+    <tr>
+        <th>Característica</th>
+        <th>Detalle</th>
+    </tr>
+    <tr>
+        <td>Protocolo</td>
+        <td>SOAP 1.1 sobre HTTP</td>
+    </tr>
+    <tr>
+        <td>Método</td>
+        <td>labwbs01.Execute</td>
+    </tr>
+    <tr>
+        <td>Entrada</td>
+        <td>Código de barras (10 dígitos)</td>
+    </tr>
+    <tr>
+        <td>Salida</td>
+        <td>XML con datos del paciente y turno</td>
+    </tr>
+    <tr>
+        <td>Autenticación</td>
+        <td>HTTP Basic Authentication</td>
+    </tr>
+    <tr>
+        <td>Timeout</td>
+        <td>10 segundos</td>
+    </tr>
+    <tr>
+        <td>Tiempo típico de respuesta</td>
+        <td>200-500 milisegundos</td>
+    </tr>
+</table>
+
+<h3>5.2 Datos Obtenidos de GXSalud</h3>
+
+<table>
+    <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Uso en LabNumerator</th>
+    </tr>
+    <tr>
+        <td>Nombre</td>
+        <td>Nombre completo del paciente</td>
+        <td>Mostrado en todas las pantallas</td>
+    </tr>
+    <tr>
+        <td>Cédula</td>
+        <td>Documento de identidad</td>
+        <td>Identificación única</td>
+    </tr>
+    <tr>
+        <td>Sector</td>
+        <td>Código del sector de laboratorio</td>
+        <td>Asignación automática a cola</td>
+    </tr>
+    <tr>
+        <td>Descripción de Sector</td>
+        <td>Nombre del sector (ej: "SECTOR A")</td>
+        <td>Mostrado al paciente</td>
+    </tr>
+    <tr>
+        <td>Fecha</td>
+        <td>Fecha de la extracción programada</td>
+        <td>Verificación de vigencia</td>
+    </tr>
+    <tr>
+        <td>Hora Inicial</td>
+        <td>Inicio del turno</td>
+        <td>Validación de horario</td>
+    </tr>
+    <tr>
+        <td>Hora Final</td>
+        <td>Fin del turno</td>
+        <td>Validación de no vencimiento</td>
+    </tr>
+</table>
+
+<h3>5.3 Manejo de Errores y Validaciones</h3>
+
+<table>
+    <tr>
+        <th>Situación</th>
+        <th>Detección</th>
+        <th>Mensaje al Usuario</th>
+    </tr>
+    <tr>
+        <td>Código no existe</td>
+        <td>GXSalud retorna Error=S</td>
+        <td>"El código ingresado no se encuentra en el sistema. Verifique con personal administrativo."</td>
+    </tr>
+    <tr>
+        <td>Turno vencido</td>
+        <td>Hora actual &gt; Hora Final</td>
+        <td>"Su turno ha vencido. El horario de atención finalizó a las [HORA]. Por favor, solicite un nuevo turno."</td>
+    </tr>
+    <tr>
+        <td>Ya registrado</td>
+        <td>Código ya en cola</td>
+        <td>"Este código ya está registrado en la cola. Por favor, espere su turno."</td>
+    </tr>
+    <tr>
+        <td>Error de autenticación</td>
+        <td>HTTP 401</td>
+        <td>"Error de sistema. Contacte al personal de laboratorio."</td>
+    </tr>
+    <tr>
+        <td>Servicio no disponible</td>
+        <td>Timeout o conexión rechazada</td>
+        <td>"El sistema no está disponible temporalmente. Intente nuevamente en unos momentos."</td>
+    </tr>
+</table>
+
+<h2>6. Guía de Usuario por Rol</h2>
+
+<h3>6.1 Para Pacientes - Estación de Escaneo</h3>
+
+<div class="feature-box">
+    <h4>Instrucciones de Uso</h4>
+    
+    <ol class="step-list">
+        <li><strong>Llegue con su orden de laboratorio</strong>
+            <ul>
+                <li>Asegúrese de tener el código de barras visible y sin arrugas</li>
+                <li>Si está doblado, extiéndalo para mejor lectura</li>
+            </ul>
+        </li>
+        
+        <li><strong>Acerque el código de barras al lector</strong>
+            <ul>
+                <li>Mantenga el papel firme frente al lector</li>
+                <li>Distancia recomendada: 5-10 cm</li>
+                <li>Espere el sonido "beep" de confirmación</li>
+            </ul>
+        </li>
+        
+        <li><strong>Verifique sus datos en pantalla</strong>
+            <ul>
+                <li>Confirme que su nombre sea correcto</li>
+                <li>Note el sector asignado</li>
+                <li>Observe su número en cola</li>
+            </ul>
+        </li>
+        
+        <li><strong>Diríjase a la sala de espera indicada</strong>
+            <ul>
+                <li>Busque las pantallas del sector asignado</li>
+                <li>Observe su número en la lista</li>
+                <li>Espere a ser llamado</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h4>Si el lector no funciona (Entrada Manual):</h4>
+    <ol>
+        <li>Toque el botón "Ingresar manualmente" en la pantalla</li>
+        <li>Escriba el número del código de barras con el teclado en pantalla</li>
+        <li>Presione "Validar"</li>
+        <li>El sistema procesará de la misma forma</li>
+    </ol>
+</div>
+
+<h3>6.2 Para Personal de Laboratorio - Panel de Control</h3>
+
+<div class="feature-box">
+    <h4>Inicio de Jornada</h4>
+    <ol>
+        <li>Acceda al sistema desde su computadora</li>
+        <li>Abra la URL: <code>http://172.20.50.136:3000/lab</code></li>
+        <li>Seleccione su sector de trabajo en las pestañas superiores</li>
+    </ol>
+
+    <h4>Durante la Atención</h4>
+    
+    <p><strong>Para llamar al siguiente paciente:</strong></p>
+    <ol>
+        <li>Verifique que el box esté disponible</li>
+        <li>Haga clic en el botón "Llamar Siguiente"</li>
+        <li>El nombre del paciente aparecerá destacado</li>
+        <li>Las pantallas públicas mostrarán el llamado</li>
+        <li>Reciba al paciente cuando ingrese</li>
+    </ol>
+
+    <p><strong>Para marcar atención completada:</strong></p>
+    <ol>
+        <li>Finalice el procedimiento con el paciente</li>
+        <li>Haga clic en "Completar" junto al nombre del paciente</li>
+        <li>El paciente saldrá automáticamente de la cola</li>
+        <li>El siguiente estará listo para ser llamado</li>
+    </ol>
+
+    <p><strong>Si el paciente no se presenta:</strong></p>
+    <ol>
+        <li>Espere 2-3 minutos</li>
+        <li>Haga clic en "Saltear"</li>
+        <li>El paciente volverá al final de la cola</li>
+        <li>El siguiente avanzará automáticamente</li>
+    </ol>
+
+    <p><strong>Para casos de urgencia:</strong></p>
+    <ol>
+        <li>Identifique al paciente en la lista</li>
+        <li>Haga clic en "Priorizar" junto a su nombre</li>
+        <li>El paciente pasará al frente de la cola</li>
+        <li>Registre la razón si es requerido</li>
+    </ol>
+</div>
+
+<h3>6.3 Para Operadores - Asistencia en Escaneo</h3>
+
+<div class="feature-box">
+    <h4>Funciones del Operador</h4>
+    
+    <p><strong>Asistencia a pacientes:</strong></p>
+    <ul>
+        <li>Ayudar a pacientes con dificultad para escanear</li>
+        <li>Verificar que el código sea legible</li>
+        <li>Usar entrada manual si el lector falla</li>
+        <li>Explicar a qué sector dirigirse</li>
+    </ul>
+
+    <p><strong>Resolución de problemas comunes:</strong></p>
+    <ul>
+        <li><strong>Código dañado:</strong> Intentar entrada manual</li>
+        <li><strong>Paciente sin código:</strong> Derivar a administración</li>
+        <li><strong>Error "Ya registrado":</strong> Verificar si ya está en cola, indicar que espere</li>
+        <li><strong>Error "Turno vencido":</strong> Derivar a administración para nuevo turno</li>
+    </ul>
+</div>
+
+<h2>7. Indicadores de Éxito</h2>
+
+<table>
+    <tr>
+        <th>Métrica</th>
+        <th>Objetivo</th>
+        <th>Medición</th>
+    </tr>
+    <tr>
+        <td>Tiempo de registro</td>
+        <td>&lt; 2 segundos</td>
+        <td>Desde escaneo hasta confirmación</td>
+    </tr>
+    <tr>
+        <td>Tasa de éxito de escaneo</td>
+        <td>&gt; 95%</td>
+        <td>Escaneos exitosos vs totales</td>
+    </tr>
+    <tr>
+        <td>Tiempo de espera promedio</td>
+        <td>&lt; 15 minutos</td>
+        <td>Desde registro hasta atención</td>
+    </tr>
+    <tr>
+        <td>Disponibilidad del sistema</td>
+        <td>&gt; 99%</td>
+        <td>Uptime del servicio</td>
+    </tr>
+    <tr>
+        <td>Satisfacción de usuarios</td>
+        <td>&gt; 80%</td>
+        <td>Encuestas periódicas</td>
+    </tr>
+</table>
+
+<h2>8. Contactos y Soporte</h2>
+
+<table>
+    <tr>
+        <th>Área</th>
+        <th>Responsable</th>
+        <th>Contacto</th>
+    </tr>
+    <tr>
+        <td>Aplicación LabNumerator</td>
+        <td>Equipo Desarrollo Infigo</td>
+        <td>desarrollo@infigo.com</td>
+    </tr>
+    <tr>
+        <td>Servicio SOAP GXSalud</td>
+        <td>Administrador GXSalud</td>
+        <td>soporte.gxsalud@hospital.com</td>
+    </tr>
+    <tr>
+        <td>Infraestructura/Servidor</td>
+        <td>IT Hospitalario</td>
+        <td>it@hospital.com</td>
+    </tr>
+    <tr>
+        <td>Soporte Técnico Urgente</td>
+        <td>Mesa de Ayuda</td>
+        <td>Interno: 1234</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Horarios de Soporte:</strong><br/>
+    Lunes a Viernes: 8:00 - 18:00<br/>
+    Sábados: 8:00 - 12:00<br/>
+    Urgencias 24/7: Contactar mesa de ayuda
+</div>
+
+<hr style="margin: 40px 0; border: 2px solid #0066cc;"/>
+
+<p style="text-align: center; color: #666; font-size: 10pt;">
+    <strong>Documento Confidencial - Infigo Teleasistencia</strong><br/>
+    Versión 1.0 - Octubre 2025<br/>
+    © Infigo Teleasistencia - Todos los derechos reservados
+</p>
+
+</body>
+</html>
+
