@@ -46,6 +46,10 @@ SOAP_URL=http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01
 
 # Habilitar servicio SOAP real (false = usa mock)
 USE_PRODUCTION_SOAP=true
+
+# Autenticación HTTP Basic
+SOAP_USERNAME=Totemlabo
+SOAP_PASSWORD=T0temLab0
 ```
 
 ### 2. Modo Desarrollo (Mock)
@@ -70,7 +74,18 @@ Para usar el servicio SOAP real:
 ```env
 USE_PRODUCTION_SOAP=true
 SOAP_URL=http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01
+SOAP_USERNAME=Totemlabo
+SOAP_PASSWORD=T0temLab0
 ```
+
+### 4. Autenticación HTTP Basic
+
+El servicio SOAP utiliza autenticación HTTP Basic para proteger el acceso. Las credenciales se configuran mediante variables de entorno:
+
+- `SOAP_USERNAME`: Usuario para autenticación
+- `SOAP_PASSWORD`: Contraseña para autenticación
+
+El cliente SOAP enviará automáticamente estas credenciales en el header `Authorization` usando el método HTTP Basic Authentication.
 
 ## 📡 Ejemplo de Comunicación
 
@@ -183,6 +198,7 @@ console.log('Llamando al servicio SOAP de producción');
 ```bash
 curl -X POST \
   http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01 \
+  -u Totemlabo:T0temLab0 \
   -H 'Content-Type: text/xml' \
   -H 'SOAPAction: labwbs01.Execute' \
   -d '<?xml version="1.0" encoding="UTF-8"?>
@@ -200,10 +216,13 @@ curl -X POST \
 
 1. Crear request POST
 2. URL: `http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01`
-3. Headers:
+3. **Authorization**: Seleccionar "Basic Auth"
+   - Username: `Totemlabo`
+   - Password: `T0temLab0`
+4. Headers:
    - `Content-Type: text/xml`
    - `SOAPAction: labwbs01.Execute`
-4. Body (raw XML): (ver ejemplo arriba)
+5. Body (raw XML): (ver ejemplo arriba)
 
 ## 🚨 Troubleshooting
 

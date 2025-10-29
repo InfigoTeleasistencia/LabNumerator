@@ -50,6 +50,10 @@ SOAP_URL=http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01
 # Usar servicio SOAP real (false = mock para desarrollo)
 USE_PRODUCTION_SOAP=false
 
+# Autenticación HTTP Basic
+SOAP_USERNAME=Totemlabo
+SOAP_PASSWORD=T0temLab0
+
 # Puerto del servidor (opcional, por defecto 3000)
 PORT=3000
 ```

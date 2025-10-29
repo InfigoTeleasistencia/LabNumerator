@@ -38,6 +38,8 @@ yarn install
 cat > .env.production.local << 'EOF'
 SOAP_URL=http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01
 USE_PRODUCTION_SOAP=true
+SOAP_USERNAME=Totemlabo
+SOAP_PASSWORD=T0temLab0
 NODE_ENV=production
 PORT=3000
 EOF
@@ -91,6 +93,8 @@ curl http://localhost:3000
 |----------|-------|----------|
 | `SOAP_URL` | `http://ae89:8086/gxsalud/servlet/...` | Yes |
 | `USE_PRODUCTION_SOAP` | `true` | Yes |
+| `SOAP_USERNAME` | `Totemlabo` | Yes |
+| `SOAP_PASSWORD` | `T0temLab0` | Yes |
 | `NODE_ENV` | `production` | Yes |
 | `PORT` | `3000` | No (default: 3000) |
 

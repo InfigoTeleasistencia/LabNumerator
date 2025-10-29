@@ -69,9 +69,9 @@ sudo git clone <your-repo-url> lab-numerator
 cd lab-numerator
 
 # 2. Create environment file
-cp .env.docker .env
+cp env.production.example .env
 nano .env
-# Edit SOAP_URL if needed
+# Edit SOAP_URL, SOAP_USERNAME, and SOAP_PASSWORD if needed
 
 # 3. Build and start
 docker-compose build
