@@ -16,7 +16,7 @@ body {
 }
 
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3B9DD4 0%, #2C7DA0 100%);
   min-height: 100vh;
 }
 
@@ -63,7 +63,7 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E73C3E 0%, #C32F31 100%);
   color: white;
 }
 

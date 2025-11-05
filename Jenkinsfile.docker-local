@@ -120,15 +120,22 @@ pipeline {
                 sh """
                     cd ${DEPLOY_PATH}
                     
-                    # Create .env file if it doesn't exist
+                    # Create .env file from .env.production if it doesn't exist
                     if [ ! -f .env ]; then
-                        cat > .env << 'EOF'
+                        if [ -f .env.production ]; then
+                            cp .env.production .env
+                            echo "📝 Created .env file from .env.production"
+                        else
+                            echo "⚠️  .env.production not found, creating default .env"
+                            cat > .env << 'EOF'
 SOAP_URL=http://ae89:8086/gxsalud/servlet/com.asesp.gxsalud.alabwbs01
 USE_PRODUCTION_SOAP=true
+SOAP_USERNAME=Totemlabo
+SOAP_PASSWORD=T0temLab0
 NODE_ENV=production
 PORT=3000
 EOF
-                        echo "📝 Created .env file"
+                        fi
                     fi
                     
                     # Stop and remove old containers

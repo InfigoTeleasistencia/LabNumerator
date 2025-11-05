@@ -38,35 +38,30 @@ export default function DisplayPage() {
   return (
     <>
       <Head>
-        <title>Pantalla de Atención - Laboratorio</title>
+        <title>Pantalla de Atención - Asociación Española</title>
       </Head>
       <main style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#E8F4F8',
         padding: '2rem',
       }}>
         {/* Header */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'white',
           borderRadius: '16px',
           padding: '1.5rem',
           marginBottom: '2rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         }}>
-          <div>
-            <h1 style={{
-              fontSize: '2rem',
-              color: '#1f2937',
-              marginBottom: '0.25rem',
-            }}>
-              Sistema de Atención - Laboratorio
-            </h1>
-            <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-              {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <img 
+              src="/logo.png" 
+              alt="Asociación Española Primera en Salud" 
+              style={{ height: '60px' }}
+            />
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{
@@ -74,7 +69,7 @@ export default function DisplayPage() {
               fontWeight: 'bold',
               color: '#1f2937',
             }}>
-              {format(currentTime, 'HH:mm:ss')}
+              {format(currentTime, 'HH:mm')}
             </div>
             <div style={{ color: '#6b7280', fontSize: '1rem' }}>
               {format(currentTime, 'dd/MM/yyyy')}
@@ -108,7 +103,7 @@ export default function DisplayPage() {
                     borderRadius: '8px',
                     border: 'none',
                     background: selectedSector === sectorId
-                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      ? '#E73C3E'
                       : '#f3f4f6',
                     color: selectedSector === sectorId ? 'white' : '#374151',
                     fontWeight: 'bold',
@@ -130,10 +125,10 @@ export default function DisplayPage() {
         }}>
           {/* Paciente actual */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'white',
             borderRadius: '16px',
             padding: '3rem',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             minHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
@@ -141,31 +136,33 @@ export default function DisplayPage() {
             justifyContent: 'center',
           }}>
             <h2 style={{
-              fontSize: '1.5rem',
-              color: '#6b7280',
+              fontSize: '2rem',
+              color: '#3B9DD4',
               marginBottom: '0.5rem',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
             }}>
               {selectedSector && queueState.sectors[selectedSector]?.waiting[0]?.sectorDescription}
             </h2>
             <h3 style={{
-              fontSize: '1.25rem',
+              fontSize: '1rem',
               color: '#9ca3af',
               marginBottom: '2rem',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
             }}>
-              Paciente Actual
+              Pase a
             </h3>
             
             {current ? (
               <div className="fade-in" style={{ textAlign: 'center', width: '100%' }}>
                 <div style={{
-                  fontSize: '6rem',
+                  fontSize: '8rem',
                   fontWeight: 'bold',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  color: '#E73C3E',
                   marginBottom: '1rem',
                   animation: 'pulse 2s infinite',
+                  letterSpacing: '8px',
                 }}>
                   {current.code}
                 </div>
@@ -196,10 +193,10 @@ export default function DisplayPage() {
 
           {/* Cola de espera */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'white',
             borderRadius: '16px',
             padding: '2rem',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             maxHeight: '80vh',
             overflow: 'hidden',
             display: 'flex',
@@ -207,8 +204,10 @@ export default function DisplayPage() {
           }}>
             <h2 style={{
               fontSize: '1.5rem',
-              color: '#6b7280',
+              color: '#3B9DD4',
               marginBottom: '1.5rem',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
             }}>
               En Espera ({waiting.length})
             </h2>
@@ -235,13 +234,13 @@ export default function DisplayPage() {
                       style={{
                         padding: '1rem',
                         background: index === 0 
-                          ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+                          ? '#FFF5E6'
                           : '#f9fafb',
                         borderRadius: '8px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        border: index === 0 ? '2px solid #f59e0b' : '1px solid #e5e7eb',
+                        border: index === 0 ? '2px solid #FCD116' : '1px solid #e5e7eb',
                       }}
                     >
                       <div>
@@ -262,7 +261,7 @@ export default function DisplayPage() {
                       <div style={{
                         fontSize: '1.5rem',
                         fontWeight: 'bold',
-                        color: index === 0 ? '#f59e0b' : '#9ca3af',
+                        color: index === 0 ? '#E73C3E' : '#9ca3af',
                       }}>
                         #{patient.position}
                       </div>

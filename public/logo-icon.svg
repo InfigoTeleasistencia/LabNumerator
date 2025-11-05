@@ -1,0 +1,16 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cruz médica (solo el icono) -->
+  <g transform="translate(50, 50)">
+    <!-- Brazo horizontal azul -->
+    <rect x="-40" y="-10" width="80" height="20" fill="#3B9DD4" rx="2"/>
+    <!-- Brazo vertical rojo -->
+    <rect x="-10" y="-40" width="20" height="80" fill="#E73C3E" rx="2"/>
+    <!-- Franja amarilla horizontal -->
+    <rect x="-40" y="-3" width="80" height="6" fill="#FCD116"/>
+    <!-- Franja amarilla vertical -->
+    <rect x="-3" y="-40" width="6" height="80" fill="#FCD116"/>
+    <!-- Círculo central -->
+    <circle cx="0" cy="0" r="12" fill="#E73C3E"/>
+  </g>
+</svg>
+

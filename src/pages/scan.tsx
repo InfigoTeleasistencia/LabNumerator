@@ -21,21 +21,24 @@ export default function ScanPage() {
 
     try {
       const response = await axios.post('/api/validate', { code });
-      
+
       if (response.data.success) {
         setStatus('success');
         setPatientName(response.data.patient.name);
         setCedula(response.data.patient.cedula);
-        setSectorInfo(response.data.sector || response.data.patient.sectorDescription);
+        setSectorInfo(
+          response.data.sector || response.data.patient.sectorDescription
+        );
         setMessage('¡Código validado correctamente!');
-        
+
         // Obtener posición en la cola del sector
         const queueResponse = await axios.get('/api/queue/state');
         const sectorId = response.data.patient.sector;
         const sectorData = queueResponse.data.sectors[sectorId];
-        
+
         if (sectorData) {
-          const pos = sectorData.waiting.findIndex((p: any) => p.code === code) + 1;
+          const pos =
+            sectorData.waiting.findIndex((p: any) => p.code === code) + 1;
           setPosition(pos);
         }
 
@@ -51,9 +54,10 @@ export default function ScanPage() {
       }
     } catch (error: any) {
       setStatus('error');
-      const errorMsg = error.response?.data?.error || 'Error al validar el código';
+      const errorMsg =
+        error.response?.data?.error || 'Error al validar el código';
       const errorDesc = error.response?.data?.errorDescription;
-      
+
       setMessage(errorDesc ? `${errorMsg}: ${errorDesc}` : errorMsg);
 
       // Auto-reset después de 4 segundos
@@ -72,204 +76,336 @@ export default function ScanPage() {
   return (
     <>
       <Head>
-        <title>Validación de Código - Laboratorio</title>
+        <title>Validación de Código - Asociación Española</title>
       </Head>
-      <main style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-      }}>
-        <div style={{ maxWidth: '700px', width: '100%' }}>
-          <Link 
-            href="/" 
+      <main
+        style={{
+          minHeight: '100vh',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '3rem 2rem',
+          background: '#2892c5',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '600px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            height: '100%',
+          }}
+        >
+          {/* Logo */}
+          <div style={{ marginBottom: '3rem' }}>
+            <img
+              src="/logo.png"
+              alt="Asociación Española Primera en Salud"
+              style={{ height: '100px', maxWidth: '90%', objectFit: 'contain' }}
+            />
+          </div>
+
+          {/* Área de contenido principal */}
+          <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              color: 'white',
-              marginBottom: '1.5rem',
-              fontSize: '1rem',
-              transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          >
-            ← Volver al inicio
-          </Link>
-
-          <div className="card fade-in" style={{ textAlign: 'center' }}>
-            <h1 style={{
-              fontSize: '2rem',
-              marginBottom: '1rem',
-              color: '#1f2937',
-            }}>
-              Validación de Código de Barras
-            </h1>
-
-            <div style={{
-              minHeight: '350px',
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '1.5rem',
-            }}>
-              {status === 'idle' && (
-                <>
-                  <div style={{
-                    fontSize: '5rem',
-                    animation: isScanning ? 'pulse 1s infinite' : 'none',
-                  }}>
-                    {isScanning ? '📷' : '📋'}
-                  </div>
-                  <p style={{
+              width: '100%',
+            }}
+          >
+            {status === 'idle' && (
+              <>
+                {/* Ilustración del tótem */}
+                <div
+                  style={{
+                    marginBottom: '2.5rem',
+                    animation: isScanning ? 'pulse 1.5s infinite' : 'none',
+                  }}
+                >
+                  <img
+                    src="/totem.png"
+                    alt="Tótem de autoservicio"
+                    style={{
+                      height: '320px',
+                      maxWidth: '95%',
+                      objectFit: 'contain',
+                      transform: 'scale(1.1)',
+                    }}
+                  />
+                </div>
+                <h1
+                  style={{
+                    fontSize: '1.9rem',
+                    color: 'white',
+                    marginBottom: '1.5rem',
+                    fontWeight: 'bold',
+                    lineHeight: '1.4',
+                    maxWidth: '550px',
+                    padding: '0 1rem',
+                  }}
+                >
+                  Pasa por el lector el código de barras ubicado en la parte
+                  superior de su formulario de coordinación
+                </h1>
+                <div
+                  style={{
                     fontSize: '1.25rem',
-                    color: '#6b7280',
-                  }}>
-                    {isScanning ? 'Escaneando...' : 'Esperando escaneo del código de barras'}
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    lineHeight: '1.6',
+                    maxWidth: '450px',
+                  }}
+                >
+                  <p style={{ marginBottom: '1rem' }}>
+                    {isScanning ? '⏳ Escaneando código...' : ''}
                   </p>
-                  <div style={{
-                    padding: '1rem',
-                    background: '#f3f4f6',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                  }}>
-                    <p>💡 Lector Union UN-BR60 conectado por USB</p>
-                    <p>Simplemente escanee el código de barras del paciente</p>
-                  </div>
-                </>
-              )}
+                </div>
+              </>
+            )}
 
-              {status === 'validating' && (
-                <>
-                  <div style={{
-                    fontSize: '5rem',
+            {status === 'validating' && (
+              <>
+                <div
+                  style={{
+                    fontSize: '8rem',
                     animation: 'pulse 1s infinite',
-                  }}>
-                    ⏳
-                  </div>
-                  <p style={{
-                    fontSize: '1.25rem',
-                    color: '#6b7280',
-                  }}>
-                    {message}
-                  </p>
-                </>
-              )}
+                    marginBottom: '2rem',
+                  }}
+                >
+                  ⏳
+                </div>
+                <h2
+                  style={{
+                    fontSize: '2rem',
+                    color: 'white',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Validando código...
+                </h2>
+              </>
+            )}
 
-              {status === 'success' && (
-                <>
-                  <div style={{
-                    fontSize: '5rem',
-                    animation: 'fadeIn 0.5s ease-out',
-                  }}>
-                    ✅
-                  </div>
-                  <div style={{
-                    animation: 'fadeIn 0.5s ease-out',
-                    width: '100%',
-                  }}>
-                    <p style={{
-                      fontSize: '1.5rem',
-                      color: '#059669',
+            {status === 'success' && (
+              <div
+                className="fade-in"
+                style={{ width: '100%', maxWidth: '500px' }}
+              >
+                <div
+                  style={{
+                    fontSize: '8rem',
+                    marginBottom: '2rem',
+                  }}
+                >
+                  ✅
+                </div>
+
+                <h2
+                  style={{
+                    fontSize: '2.5rem',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    marginBottom: '2rem',
+                  }}
+                >
+                  ¡Código Validado!
+                </h2>
+
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    padding: '2.5rem',
+                    borderRadius: '20px',
+                    marginBottom: '2rem',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '1.75rem',
+                      color: '#1f2937',
+                      marginBottom: '1rem',
                       fontWeight: 'bold',
-                      marginBottom: '1rem',
-                    }}>
-                      {message}
-                    </p>
-                    
-                    <div style={{
-                      background: '#f9fafb',
-                      padding: '1.5rem',
-                      borderRadius: '12px',
-                      marginBottom: '1rem',
-                    }}>
-                      <p style={{
-                        fontSize: '1.25rem',
-                        color: '#1f2937',
-                        marginBottom: '0.5rem',
-                      }}>
-                        <strong>{patientName}</strong>
-                      </p>
-                      <p style={{
-                        fontSize: '1rem',
-                        color: '#6b7280',
-                      }}>
-                        CI: {cedula}
-                      </p>
-                    </div>
+                    }}
+                  >
+                    {patientName}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '1.125rem',
+                      color: '#6b7280',
+                      marginBottom: '2rem',
+                    }}
+                  >
+                    CI: {cedula}
+                  </p>
 
-                    <div style={{
+                  <div
+                    style={{
                       display: 'flex',
-                      gap: '1rem',
+                      gap: '1.5rem',
                       justifyContent: 'center',
                       flexWrap: 'wrap',
-                    }}>
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '1rem 1.5rem',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '1.25rem 2rem',
+                        background: '#3B9DD4',
                         color: 'white',
                         borderRadius: '12px',
-                        fontSize: '1rem',
-                      }}>
-                        <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>Sector</div>
-                        <strong style={{ fontSize: '1.25rem' }}>{sectorInfo}</strong>
+                        minWidth: '140px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '0.875rem',
+                          opacity: 0.9,
+                          marginBottom: '0.25rem',
+                        }}
+                      >
+                        Diríjase a
                       </div>
-                      
-                      {position !== null && (
-                        <div style={{
-                          display: 'inline-block',
-                          padding: '1rem 1.5rem',
-                          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                      <strong style={{ fontSize: '1.5rem', display: 'block' }}>
+                        {sectorInfo}
+                      </strong>
+                    </div>
+
+                    {position !== null && (
+                      <div
+                        style={{
+                          padding: '1.25rem 2rem',
+                          background: '#E73C3E',
                           color: 'white',
                           borderRadius: '12px',
-                          fontSize: '1rem',
-                        }}>
-                          <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>Posición</div>
-                          <strong style={{ fontSize: '1.25rem' }}>#{position}</strong>
+                          minWidth: '140px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '0.875rem',
+                            opacity: 0.9,
+                            marginBottom: '0.25rem',
+                          }}
+                        >
+                          Posición
                         </div>
-                      )}
-                    </div>
+                        <strong
+                          style={{ fontSize: '1.5rem', display: 'block' }}
+                        >
+                          #{position}
+                        </strong>
+                      </div>
+                    )}
                   </div>
-                </>
-              )}
+                </div>
 
-              {status === 'error' && (
-                <>
-                  <div style={{
-                    fontSize: '5rem',
-                    animation: 'fadeIn 0.5s ease-out',
-                  }}>
-                    ❌
-                  </div>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    color: '#dc2626',
-                    fontWeight: 'bold',
-                    padding: '0 1rem',
-                  }}>
+                <p
+                  style={{
+                    fontSize: '1.25rem',
+                    color: 'white',
+                    lineHeight: '1.5',
+                    fontWeight: '600',
+                  }}
+                >
+                  Retira tu ticket con tu número y<br />
+                  espera a ser llamado por las pantallas
+                  <br />
+                  en el sector de laboratorio
+                </p>
+              </div>
+            )}
+
+            {status === 'error' && (
+              <>
+                <div
+                  style={{
+                    fontSize: '8rem',
+                    marginBottom: '2rem',
+                  }}
+                >
+                  ❌
+                </div>
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    padding: '2rem',
+                    borderRadius: '20px',
+                    maxWidth: '450px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '1.5rem',
+                      color: '#dc2626',
+                      fontWeight: 'bold',
+                      lineHeight: '1.4',
+                    }}
+                  >
                     {message}
                   </p>
-                </>
-              )}
-            </div>
+                </div>
+                <p
+                  style={{
+                    fontSize: '1.125rem',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    marginTop: '2rem',
+                  }}
+                >
+                  Por favor consulte con recepción
+                </p>
+              </>
+            )}
           </div>
 
-          <div style={{
-            marginTop: '1.5rem',
-            padding: '1rem',
-            background: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: '8px',
-            fontSize: '0.875rem',
-            color: '#374151',
-          }}>
-            <p><strong>Códigos de prueba (mock):</strong></p>
-            <p>110007938, 110007939, 110007940, 110007941, 110007942</p>
+          {/* Footer - Instrucciones pequeñas */}
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: '2rem',
+              fontSize: '0.875rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              textAlign: 'center',
+            }}
+          >
+            <p></p>
           </div>
+
+          {/* Link oculto para volver (solo visible en desarrollo) */}
+          <Link
+            href="/"
+            style={{
+              position: 'fixed',
+              bottom: '10px',
+              left: '10px',
+              fontSize: '0.75rem',
+              color: 'rgba(255, 255, 255, 0.5)',
+              textDecoration: 'none',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+            }}
+          >
+            ⌂ Inicio
+          </Link>
         </div>
       </main>
     </>

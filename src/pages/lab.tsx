@@ -89,31 +89,43 @@ export default function LabPage() {
   return (
     <>
       <Head>
-        <title>Panel Laboratorista - Laboratorio</title>
+        <title>Panel Laboratorista - Asociación Española</title>
       </Head>
       <main style={{
         minHeight: '100vh',
         padding: '2rem',
+        background: '#E8F4F8',
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            marginBottom: '2rem',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '2rem',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
           }}>
-            <div>
-              <h1 style={{
-                fontSize: '2.5rem',
-                color: 'white',
-                marginBottom: '0.5rem',
-              }}>
-                Panel del Laboratorista
-              </h1>
-              <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                {isConnected ? '🟢 Sistema conectado' : '🔴 Sistema desconectado'}
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+              <img 
+                src="/logo-icon.png" 
+                alt="Asociación Española" 
+                style={{ height: '50px' }}
+              />
+              <div>
+                <h1 style={{
+                  fontSize: '1.75rem',
+                  color: '#1f2937',
+                  marginBottom: '0.25rem',
+                }}>
+                  Panel del Laboratorista
+                </h1>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  {isConnected ? '🟢 Sistema conectado' : '🔴 Sistema desconectado'}
+                </p>
+              </div>
             </div>
             <Link href="/" className="btn btn-secondary">
               Volver al inicio
@@ -166,7 +178,7 @@ export default function LabPage() {
                         borderRadius: '8px',
                         border: 'none',
                         background: selectedSector === sectorId
-                          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                          ? '#E73C3E'
                           : '#f3f4f6',
                         color: selectedSector === sectorId ? 'white' : '#374151',
                         fontWeight: 'bold',
@@ -211,7 +223,7 @@ export default function LabPage() {
                 <div className="fade-in">
                   <div style={{
                     padding: '2rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#E73C3E',
                     borderRadius: '12px',
                     color: 'white',
                     textAlign: 'center',
@@ -269,36 +281,36 @@ export default function LabPage() {
               }}>
                 <div style={{
                   padding: '1.5rem',
-                  background: '#fef3c7',
+                  background: '#FFF5E6',
                   borderRadius: '12px',
                   textAlign: 'center',
                 }}>
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
-                    color: '#f59e0b',
+                    color: '#FCD116',
                   }}>
                     {totalWaiting}
                   </div>
-                  <div style={{ color: '#92400e', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
                     En Espera
                   </div>
                 </div>
 
                 <div style={{
                   padding: '1.5rem',
-                  background: '#dbeafe',
+                  background: '#E1F4FB',
                   borderRadius: '12px',
                   textAlign: 'center',
                 }}>
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
-                    color: '#3b82f6',
+                    color: '#3B9DD4',
                   }}>
                     {totalCurrent}
                   </div>
-                  <div style={{ color: '#1e3a8a', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
                     En Atención
                   </div>
                 </div>
@@ -316,25 +328,25 @@ export default function LabPage() {
                   }}>
                     {totalRecent}
                   </div>
-                  <div style={{ color: '#064e3b', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
                     Atendidos
                   </div>
                 </div>
 
                 <div style={{
                   padding: '1.5rem',
-                  background: '#f3e8ff',
+                  background: '#FCE8E9',
                   borderRadius: '12px',
                   textAlign: 'center',
                 }}>
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
-                    color: '#9333ea',
+                    color: '#E73C3E',
                   }}>
                     {sectors.length}
                   </div>
-                  <div style={{ color: '#581c87', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
                     Sectores Activos
                   </div>
                 </div>
@@ -380,10 +392,10 @@ export default function LabPage() {
                       style={{
                         padding: '1.5rem',
                         background: index === 0 
-                          ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+                          ? '#FFF5E6'
                           : '#f9fafb',
                         borderRadius: '8px',
-                        border: index === 0 ? '2px solid #f59e0b' : '1px solid #e5e7eb',
+                        border: index === 0 ? '2px solid #FCD116' : '1px solid #e5e7eb',
                       }}
                     >
                       <div style={{
@@ -401,7 +413,7 @@ export default function LabPage() {
                         </div>
                         <div style={{
                           padding: '0.25rem 0.75rem',
-                          background: index === 0 ? '#f59e0b' : '#6b7280',
+                          background: index === 0 ? '#E73C3E' : '#6b7280',
                           color: 'white',
                           borderRadius: '999px',
                           fontSize: '0.875rem',

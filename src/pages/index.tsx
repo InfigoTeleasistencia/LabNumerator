@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Sistema de Atención - Laboratorio</title>
+        <title>Sistema de Atención - Asociación Española Primera en Salud</title>
         <meta name="description" content="Sistema de numeración de atención para laboratorio" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -15,19 +15,24 @@ export default function Home() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
+        background: '#E8F4F8',
       }}>
         <div style={{
-          maxWidth: '800px',
+          maxWidth: '900px',
           width: '100%',
         }}>
-          <div className="card fade-in" style={{ textAlign: 'center' }}>
+          <div className="card fade-in" style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ marginBottom: '2rem' }}>
+              <img 
+                src="/logo.png" 
+                alt="Asociación Española Primera en Salud" 
+                style={{ height: '80px', margin: '0 auto' }}
+              />
+            </div>
             <h1 style={{
               fontSize: '2.5rem',
               marginBottom: '1rem',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              color: '#1f2937',
             }}>
               Sistema de Atención
             </h1>
@@ -49,13 +54,20 @@ export default function Home() {
                 display: 'block',
                 padding: '2rem',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: '#E73C3E',
                 color: 'white',
                 textDecoration: 'none',
-                transition: 'transform 0.2s',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                boxShadow: '0 4px 12px rgba(231, 60, 62, 0.3)',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(231, 60, 62, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(231, 60, 62, 0.3)';
+              }}
               >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
@@ -70,13 +82,20 @@ export default function Home() {
                 display: 'block',
                 padding: '2rem',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                background: '#3B9DD4',
                 color: 'white',
                 textDecoration: 'none',
-                transition: 'transform 0.2s',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                boxShadow: '0 4px 12px rgba(59, 157, 212, 0.3)',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(59, 157, 212, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 157, 212, 0.3)';
+              }}
               >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📺</div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
@@ -91,13 +110,20 @@ export default function Home() {
                 display: 'block',
                 padding: '2rem',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                background: '#2C7DA0',
                 color: 'white',
                 textDecoration: 'none',
-                transition: 'transform 0.2s',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                boxShadow: '0 4px 12px rgba(44, 125, 160, 0.3)',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(44, 125, 160, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(44, 125, 160, 0.3)';
+              }}
               >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👨‍⚕️</div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
