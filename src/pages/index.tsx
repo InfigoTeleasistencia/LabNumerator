@@ -134,6 +134,60 @@ export default function Home() {
                 </p>
               </Link>
             </div>
+
+            {/* Puestos de laboratorio para testing */}
+            <div style={{
+              marginTop: '2rem',
+              padding: '1.5rem',
+              background: 'rgba(255, 255, 255, 0.6)',
+              borderRadius: '8px',
+              border: '1px dashed #cbd5e0',
+            }}>
+              <h3 style={{
+                fontSize: '1.125rem',
+                color: '#6b7280',
+                marginBottom: '1rem',
+                textAlign: 'center',
+              }}>
+                Acceso Directo por Puesto
+              </h3>
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+              }}>
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <Link 
+                    key={num}
+                    href={`/lab/${num}`} 
+                    style={{
+                      display: 'block',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      background: '#f3f4f6',
+                      color: '#1f2937',
+                      textDecoration: 'none',
+                      fontWeight: 'bold',
+                      transition: 'all 0.2s',
+                      border: '1px solid #e5e7eb',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#2C7DA0';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.borderColor = '#2C7DA0';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.color = '#1f2937';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  >
+                    Puesto {num}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </main>

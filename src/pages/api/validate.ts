@@ -12,7 +12,7 @@ export default async function handler(
   }
 
   try {
-    const { code } = req.body;
+    const { code, testMode, testData } = req.body;
 
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ error: 'Código inválido' });
@@ -27,17 +27,24 @@ export default async function handler(
       });
     }
 
-    // Validar con el servicio SOAP
-    const validation = await validateCodeWithExternalAPI(code);
+    let patientData;
 
-    if (!validation.valid) {
-      return res.status(400).json({ 
-        error: validation.error || 'Código no válido',
-        errorDescription: validation.errorDescription,
-      });
+    // Si es modo test, usar los datos de prueba
+    if (testMode && testData) {
+      patientData = testData;
+    } else {
+      // Validar con el servicio SOAP
+      const validation = await validateCodeWithExternalAPI(code);
+
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          error: validation.error || 'Código no válido',
+          errorDescription: validation.errorDescription,
+        });
+      }
+
+      patientData = validation.patient!;
     }
-
-    const patientData = validation.patient!;
 
     // Agregar a la cola del sector correspondiente
     const patient = queueStore.addPatient({
@@ -55,8 +62,18 @@ export default async function handler(
       horaFinal: patientData.horaFinal,
     });
 
+    console.log('✅ Paciente agregado a la cola:', {
+      id: patient.id,
+      code: patient.code,
+      name: patient.name,
+      sector: patient.sector,
+      sectorDescription: patient.sectorDescription,
+    });
+
     // Emitir actualización por WebSocket
-    emitQueueUpdate(queueStore.getState());
+    const currentState = queueStore.getState();
+    console.log('📡 Emitiendo actualización de cola, sectores:', Object.keys(currentState.sectors));
+    emitQueueUpdate(currentState);
 
     return res.status(200).json({ 
       success: true,

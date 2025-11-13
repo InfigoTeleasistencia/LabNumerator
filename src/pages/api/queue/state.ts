@@ -11,6 +11,13 @@ export default function handler(
 
   try {
     const state = queueStore.getState();
+    
+    // Agregar todos los pacientes llamados para cada sector
+    Object.keys(state.sectors).forEach(sectorId => {
+      const calledPatients = queueStore.getCalledPatients(sectorId);
+      (state.sectors[sectorId] as any).calledPatients = calledPatients;
+    });
+    
     return res.status(200).json(state);
   } catch (error) {
     console.error('Error getting queue state:', error);

@@ -14,13 +14,95 @@ export default function ScanPage() {
   const [position, setPosition] = useState<number | null>(null);
   const [cedula, setCedula] = useState('');
 
-  const handleScan = async (code: string) => {
+  // Estado para panel de testing personalizado
+  const [showTestPanel, setShowTestPanel] = useState(false);
+  const [testFormData, setTestFormData] = useState({
+    nombre: 'Juan',
+    apellido1: 'Pérez',
+    apellido2: 'García',
+    cedula: '1234567',
+    digito: '8',
+    horaInicial: '08:00',
+    horaFinal: '10:00',
+    sector: '151',
+    sectorDescripcion: 'SECTOR A',
+  });
+
+  // Genera datos aleatorios para testing
+  const generateRandomTestData = () => {
+    const firstNames = ['Juan', 'María', 'Carlos', 'Ana', 'Luis', 'Sofía', 'Pedro', 'Laura', 'Miguel', 'Carmen'];
+    const lastNames = ['González', 'Rodríguez', 'Martínez', 'García', 'López', 'Fernández', 'Pérez', 'Sánchez', 'Díaz', 'Torres'];
+    
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName1 = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const lastName2 = lastNames[Math.floor(Math.random() * lastNames.length)];
+    
+    const cedula = Math.floor(1000000 + Math.random() * 8000000);
+    const digito = Math.floor(Math.random() * 10);
+    const code = `TEST${Date.now()}`;
+    
+    // Fechas aleatorias para hoy
+    const now = new Date();
+    const horaInicial = `${String(Math.floor(8 + Math.random() * 4)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+    const horaFinal = `${String(Math.floor(12 + Math.random() * 4)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+    
+    return {
+      code,
+      name: `${firstName} ${lastName1} ${lastName2}`,
+      cedula,
+      digito,
+      matricula: Math.floor(10000 + Math.random() * 90000),
+      usuario: Math.floor(100000 + Math.random() * 900000),
+      dependencia: 151,
+      depDescripcion: 'LABORATORIO',
+      sector: 151,
+      secDescripcion: 'SECTOR A',
+      fecha: now.toISOString().split('T')[0],
+      horaInicial,
+      horaFinal,
+    };
+  };
+
+  const handleTestScan = async () => {
+    const testData = generateRandomTestData();
+    console.log('Test scan con datos aleatorios:', testData);
+    await handleScan(testData.code, testData);
+  };
+
+  const handleCustomTestScan = async () => {
+    const now = new Date();
+    const testData = {
+      code: `TEST${Date.now()}`,
+      name: `${testFormData.nombre} ${testFormData.apellido1} ${testFormData.apellido2}`,
+      cedula: parseInt(testFormData.cedula),
+      digito: parseInt(testFormData.digito),
+      matricula: Math.floor(10000 + Math.random() * 90000),
+      usuario: Math.floor(100000 + Math.random() * 900000),
+      dependencia: parseInt(testFormData.sector),
+      depDescripcion: 'LABORATORIO',
+      sector: parseInt(testFormData.sector),
+      secDescripcion: testFormData.sectorDescripcion,
+      fecha: now.toISOString().split('T')[0],
+      horaInicial: testFormData.horaInicial,
+      horaFinal: testFormData.horaFinal,
+    };
+    
+    console.log('Test scan con datos personalizados:', testData);
+    await handleScan(testData.code, testData);
+    setShowTestPanel(false); // Cerrar panel después de enviar
+  };
+
+  const handleScan = async (code: string, testData?: any) => {
     console.log('Código escaneado:', code);
     setStatus('validating');
     setMessage('Validando código...');
 
     try {
-      const response = await axios.post('/api/validate', { code });
+      const response = await axios.post('/api/validate', { 
+        code, 
+        testMode: !!testData,
+        testData 
+      });
 
       if (response.data.success) {
         setStatus('success');
@@ -129,6 +211,7 @@ export default function ScanPage() {
                 <div
                   style={{
                     marginBottom: '2.5rem',
+                    overflow: 'hidden',
                     animation: isScanning ? 'pulse 1.5s infinite' : 'none',
                   }}
                 >
@@ -317,10 +400,8 @@ export default function ScanPage() {
                     fontWeight: '600',
                   }}
                 >
-                  Retira tu ticket con tu número y<br />
-                  espera a ser llamado por las pantallas
-                  <br />
-                  en el sector de laboratorio
+                  Por favor, espera a ser llamado<br />
+                  en las pantallas del sector de laboratorio
                 </p>
               </div>
             )}
@@ -406,6 +487,304 @@ export default function ScanPage() {
           >
             ⌂ Inicio
           </Link>
+
+          {/* Panel de Testing */}
+          <div style={{
+            position: 'fixed',
+            bottom: '10px',
+            right: '10px',
+            zIndex: 1000,
+          }}>
+            {/* Botones de test */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: showTestPanel ? '10px' : '0',
+            }}>
+              <button
+                onClick={handleTestScan}
+                disabled={status !== 'idle'}
+                style={{
+                  fontSize: '0.75rem',
+                  color: status === 'idle' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)',
+                  background: status === 'idle' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '8px 15px',
+                  borderRadius: '6px',
+                  cursor: status === 'idle' ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (status === 'idle') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (status === 'idle') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  }
+                }}
+              >
+                🎲 Aleatorio
+              </button>
+
+              <button
+                onClick={() => setShowTestPanel(!showTestPanel)}
+                disabled={status !== 'idle'}
+                style={{
+                  fontSize: '0.75rem',
+                  color: status === 'idle' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)',
+                  background: status === 'idle' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '8px 15px',
+                  borderRadius: '6px',
+                  cursor: status === 'idle' ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (status === 'idle') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (status === 'idle') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  }
+                }}
+              >
+                🧪 {showTestPanel ? 'Cerrar' : 'Personalizar'}
+              </button>
+            </div>
+
+            {/* Panel de formulario personalizado */}
+            {showTestPanel && status === 'idle' && (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                width: '350px',
+                maxHeight: '500px',
+                overflowY: 'auto',
+              }}>
+                <h3 style={{
+                  margin: '0 0 1rem 0',
+                  fontSize: '1rem',
+                  color: '#1f2937',
+                  fontWeight: 'bold',
+                }}>
+                  Datos de Prueba Personalizados
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {/* Nombre */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      value={testFormData.nombre}
+                      onChange={(e) => setTestFormData({ ...testFormData, nombre: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #d1d5db',
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+
+                  {/* Apellidos */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Apellido 1
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.apellido1}
+                        onChange={(e) => setTestFormData({ ...testFormData, apellido1: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Apellido 2
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.apellido2}
+                        onChange={(e) => setTestFormData({ ...testFormData, apellido2: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cédula */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Cédula
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.cedula}
+                        onChange={(e) => setTestFormData({ ...testFormData, cedula: e.target.value.replace(/\D/g, '') })}
+                        placeholder="1234567"
+                        maxLength={7}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Dígito
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.digito}
+                        onChange={(e) => setTestFormData({ ...testFormData, digito: e.target.value.replace(/\D/g, '') })}
+                        placeholder="8"
+                        maxLength={1}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Horarios */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Hora Inicial
+                      </label>
+                      <input
+                        type="time"
+                        value={testFormData.horaInicial}
+                        onChange={(e) => setTestFormData({ ...testFormData, horaInicial: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Hora Final
+                      </label>
+                      <input
+                        type="time"
+                        value={testFormData.horaFinal}
+                        onChange={(e) => setTestFormData({ ...testFormData, horaFinal: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sector */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Sector
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.sector}
+                        onChange={(e) => setTestFormData({ ...testFormData, sector: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+                        Descripción
+                      </label>
+                      <input
+                        type="text"
+                        value={testFormData.sectorDescripcion}
+                        onChange={(e) => setTestFormData({ ...testFormData, sectorDescripcion: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botón de enviar */}
+                  <button
+                    onClick={handleCustomTestScan}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      background: '#E73C3E',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      marginTop: '0.5rem',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#d32f2f';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#E73C3E';
+                    }}
+                  >
+                    ✓ Crear Paciente de Prueba
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </>

@@ -1,41 +1,99 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useSocket } from '@/hooks/useSocket';
 import axios from 'axios';
 import { format } from 'date-fns';
 
 export default function LabPage() {
+  const router = useRouter();
   const { isConnected, queueState } = useSocket();
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  
+  // Extraer número de puesto de la URL (ej: /lab?puesto=1 o /lab/1)
+  const puestoNumber = router.query.puesto 
+    ? parseInt(router.query.puesto as string, 10)
+    : router.query.id 
+    ? parseInt(router.query.id as string, 10)
+    : 1; // Default a puesto 1
+
+  // Cargar estado inicial directamente desde API
+  const [localQueueState, setLocalQueueState] = useState(queueState);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Cargar estado inicial
   useEffect(() => {
-    axios.get('/api/queue/state').catch(console.error);
+    console.log('🔄 Cargando estado inicial de la cola...');
+    axios.get('/api/queue/state')
+      .then(response => {
+        console.log('📊 Estado de cola cargado:', response.data);
+        setLocalQueueState(response.data);
+        setLastUpdate(Date.now());
+      })
+      .catch(error => {
+        console.error('❌ Error cargando estado:', error);
+      });
   }, []);
 
-  // Seleccionar el primer sector automáticamente
+  // Actualizar estado local cuando llegue por WebSocket
   useEffect(() => {
-    if (!selectedSector && Object.keys(queueState.sectors).length > 0) {
-      setSelectedSector(Object.keys(queueState.sectors)[0]);
+    if (Object.keys(queueState.sectors).length > 0) {
+      console.log('📡 Actualizando estado desde WebSocket');
+      setLocalQueueState(queueState);
+      setLastUpdate(Date.now());
     }
-  }, [queueState.sectors, selectedSector]);
+  }, [queueState]);
+
+  // Polling de respaldo si WebSocket falla (cada 5 segundos)
+  useEffect(() => {
+    const pollingInterval = setInterval(() => {
+      const timeSinceLastUpdate = Date.now() - lastUpdate;
+      
+      // Si han pasado más de 10 segundos sin actualización, usar polling
+      if (timeSinceLastUpdate > 10000) {
+        console.log('⚠️  Usando polling de respaldo (WebSocket inactivo)');
+        axios.get('/api/queue/state')
+          .then(response => {
+            setLocalQueueState(response.data);
+            setLastUpdate(Date.now());
+          })
+          .catch(error => {
+            console.error('❌ Error en polling:', error);
+          });
+      }
+    }, 5000); // Revisar cada 5 segundos
+
+    return () => clearInterval(pollingInterval);
+  }, [lastUpdate]);
+
+  // Log para debug
+  useEffect(() => {
+    const sectorsInfo = Object.entries(localQueueState.sectors).map(([id, data]) => ({
+      id,
+      waiting: data.waiting.length,
+      hasCurrent: !!data.current,
+    }));
+    console.log('🔄 Estado de cola actualizado en Lab Panel:', sectorsInfo);
+  }, [localQueueState]);
+
+  // Trabajar con el primer sector disponible (único sector)
+  const selectedSector = Object.keys(localQueueState.sectors)[0] || null;
 
   const handleCallNext = async () => {
     if (isLoading || !selectedSector) return;
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/api/queue/next', { sectorId: selectedSector });
+      const response = await axios.post('/api/queue/next', { 
+        sectorId: selectedSector,
+        puesto: puestoNumber 
+      });
       
       if (response.data.success) {
         const patient = response.data.patient;
-        setNotification(`Llamando a: ${patient.name} (${patient.code})`);
-        
-        // Reproducir sonido de notificación
-        playNotificationSound();
+        setNotification(`Llamando a: ${patient.name} (${patient.code}) - Puesto ${puestoNumber}`);
         
         // Limpiar notificación después de 3 segundos
         setTimeout(() => {
@@ -53,38 +111,27 @@ export default function LabPage() {
     }
   };
 
-  const playNotificationSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
-      console.error('Error playing sound:', error);
-    }
-  };
 
-  const sectors = Object.keys(queueState.sectors);
-  const sectorData = selectedSector ? queueState.sectors[selectedSector] : null;
-  const current = sectorData?.current || null;
+  const sectors = Object.keys(localQueueState.sectors);
+  const sectorData = selectedSector ? localQueueState.sectors[selectedSector] : null;
+  
+  // Obtener TODOS los pacientes llamados
+  const calledPatients = sectorData && (sectorData as any).calledPatients 
+    ? (sectorData as any).calledPatients 
+    : [];
+  
+  // Filtrar el paciente actual de ESTE puesto específico
+  const current = calledPatients.find((p: any) => p.puesto === puestoNumber) || null;
+  
   const waiting = sectorData?.waiting || [];
   const recent = sectorData?.recent || [];
+  
+  console.log('🏥 [Lab] Puesto:', puestoNumber, '| Paciente actual:', current?.code || 'ninguno', '| Total llamados:', calledPatients.length);
 
   // Calcular totales generales
-  const totalWaiting = sectors.reduce((sum, id) => sum + queueState.sectors[id].waiting.length, 0);
-  const totalCurrent = sectors.reduce((sum, id) => sum + (queueState.sectors[id].current ? 1 : 0), 0);
-  const totalRecent = sectors.reduce((sum, id) => sum + queueState.sectors[id].recent.length, 0);
+  const totalWaiting = sectors.reduce((sum, id) => sum + localQueueState.sectors[id].waiting.length, 0);
+  const totalCurrent = sectors.reduce((sum, id) => sum + (localQueueState.sectors[id].current ? 1 : 0), 0);
+  const totalRecent = sectors.reduce((sum, id) => sum + localQueueState.sectors[id].recent.length, 0);
 
   return (
     <>
@@ -120,7 +167,7 @@ export default function LabPage() {
                   color: '#1f2937',
                   marginBottom: '0.25rem',
                 }}>
-                  Panel del Laboratorista
+                  Panel del Laboratorista - Puesto {puestoNumber}
                 </h1>
                 <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
                   {isConnected ? '🟢 Sistema conectado' : '🔴 Sistema desconectado'}
@@ -149,51 +196,30 @@ export default function LabPage() {
             </div>
           )}
 
-          {/* Selector de Sector */}
-          {sectors.length > 0 && (
+          {/* Información del Sector Actual */}
+          {selectedSector && sectorData && (
             <div style={{
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'rgba(59, 157, 212, 0.1)',
               borderRadius: '12px',
-              padding: '1rem',
+              padding: '1rem 1.5rem',
               marginBottom: '1.5rem',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+              border: '2px solid #3B9DD4',
+              textAlign: 'center',
             }}>
-              <h3 style={{ marginBottom: '1rem', color: '#374151' }}>Seleccionar Sector:</h3>
               <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                flexWrap: 'wrap',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: '#3B9DD4',
               }}>
-                {sectors.map((sectorId) => {
-                  const sector = queueState.sectors[sectorId];
-                  const patient = sector.waiting[0];
-                  const sectorName = patient?.sectorDescription || `Sector ${sectorId}`;
-                  
-                  return (
-                    <button
-                      key={sectorId}
-                      onClick={() => setSelectedSector(sectorId)}
-                      style={{
-                        padding: '1rem 1.5rem',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: selectedSector === sectorId
-                          ? '#E73C3E'
-                          : '#f3f4f6',
-                        color: selectedSector === sectorId ? 'white' : '#374151',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      <div>{sectorName}</div>
-                      <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>
-                        {sector.waiting.length} en espera
-                      </div>
-                    </button>
-                  );
-                })}
+                {sectorData.waiting[0]?.sectorDescription || `Sector ${selectedSector}`}
+              </div>
+              <div style={{
+                fontSize: '1rem',
+                color: '#6b7280',
+                marginTop: '0.25rem',
+              }}>
+                {waiting.length} paciente{waiting.length !== 1 ? 's' : ''} en espera
               </div>
             </div>
           )}
@@ -212,11 +238,6 @@ export default function LabPage() {
                 color: '#1f2937',
               }}>
                 Atendiendo Ahora
-                {selectedSector && sectorData?.waiting[0] && (
-                  <span style={{ fontSize: '1rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                    ({sectorData.waiting[0].sectorDescription})
-                  </span>
-                )}
               </h2>
 
               {current ? (
@@ -354,7 +375,7 @@ export default function LabPage() {
             </div>
           </div>
 
-          {/* Cola de espera del sector seleccionado */}
+          {/* Cola de espera */}
           {selectedSector && (
             <div className="card">
               <h2 style={{
@@ -363,11 +384,6 @@ export default function LabPage() {
                 color: '#1f2937',
               }}>
                 Pacientes en Espera
-                {sectorData?.waiting[0] && (
-                  <span style={{ fontSize: '1rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                    ({sectorData.waiting[0].sectorDescription})
-                  </span>
-                )}
               </h2>
 
               {waiting.length === 0 ? (
@@ -404,12 +420,22 @@ export default function LabPage() {
                         alignItems: 'flex-start',
                         marginBottom: '0.5rem',
                       }}>
-                        <div style={{
-                          fontSize: '1.5rem',
-                          fontWeight: 'bold',
-                          color: '#1f2937',
-                        }}>
-                          {patient.code}
+                        <div>
+                          <div style={{
+                            fontSize: '1.5rem',
+                            fontWeight: 'bold',
+                            color: '#1f2937',
+                          }}>
+                            {patient.code}
+                          </div>
+                          <div style={{
+                            fontSize: '0.875rem',
+                            color: '#3B9DD4',
+                            fontWeight: 'bold',
+                            marginTop: '0.25rem',
+                          }}>
+                            🕐 Turno: {patient.horaInicial} - {patient.horaFinal}
+                          </div>
                         </div>
                         <div style={{
                           padding: '0.25rem 0.75rem',

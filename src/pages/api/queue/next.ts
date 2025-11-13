@@ -11,7 +11,7 @@ export default function handler(
   }
 
   try {
-    const { sectorId } = req.body;
+    const { sectorId, puesto } = req.body;
 
     if (!sectorId) {
       return res.status(400).json({ 
@@ -19,7 +19,7 @@ export default function handler(
       });
     }
 
-    const patient = queueStore.callNext(sectorId);
+    const patient = queueStore.callNext(sectorId, puesto);
     
     if (!patient) {
       return res.status(404).json({ 

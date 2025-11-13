@@ -16,6 +16,7 @@ export interface Patient {
   calledAt?: number;
   completedAt?: number;
   position?: number;
+  puesto?: number; // Número del puesto/lab que lo llamó
 }
 
 export interface QueueState {

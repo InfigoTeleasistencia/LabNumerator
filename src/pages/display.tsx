@@ -8,7 +8,9 @@ import { Patient } from '@/types';
 export default function DisplayPage() {
   const { isConnected, queueState } = useSocket();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
+  const [localQueueState, setLocalQueueState] = useState(queueState);
+  const [lastCalledPatientId, setLastCalledPatientId] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Actualizar reloj cada segundo
   useEffect(() => {
@@ -18,22 +20,107 @@ export default function DisplayPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Función para reproducir sonido de notificación
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+      
+      console.log('🔊 Sonido de notificación reproducido en sala de espera');
+    } catch (error) {
+      console.error('Error playing sound:', error);
+    }
+  };
+
   // Cargar estado inicial
   useEffect(() => {
-    axios.get('/api/queue/state').catch(console.error);
+    console.log('🔄 [Display] Cargando estado inicial de la cola...');
+    axios.get('/api/queue/state')
+      .then(response => {
+        console.log('📊 [Display] Estado de cola cargado:', response.data);
+        setLocalQueueState(response.data);
+        setLastUpdate(Date.now());
+      })
+      .catch(error => {
+        console.error('❌ [Display] Error cargando estado:', error);
+      });
   }, []);
 
-  // Seleccionar el primer sector automáticamente
+  // Actualizar estado local cuando llegue por WebSocket
   useEffect(() => {
-    if (!selectedSector && Object.keys(queueState.sectors).length > 0) {
-      setSelectedSector(Object.keys(queueState.sectors)[0]);
+    if (Object.keys(queueState.sectors).length > 0) {
+      console.log('📡 [Display] Actualizando estado desde WebSocket');
+      setLocalQueueState(queueState);
+      setLastUpdate(Date.now());
     }
-  }, [queueState.sectors, selectedSector]);
+  }, [queueState]);
 
-  const sectors = Object.keys(queueState.sectors);
-  const sectorData = selectedSector ? queueState.sectors[selectedSector] : null;
-  const current = sectorData?.current || null;
+  // Polling de respaldo si WebSocket falla (cada 5 segundos)
+  useEffect(() => {
+    const pollingInterval = setInterval(() => {
+      const timeSinceLastUpdate = Date.now() - lastUpdate;
+      
+      // Si han pasado más de 10 segundos sin actualización, usar polling
+      if (timeSinceLastUpdate > 10000) {
+        console.log('⚠️  [Display] Usando polling de respaldo (WebSocket inactivo)');
+        axios.get('/api/queue/state')
+          .then(response => {
+            setLocalQueueState(response.data);
+            setLastUpdate(Date.now());
+          })
+          .catch(error => {
+            console.error('❌ [Display] Error en polling:', error);
+          });
+      }
+    }, 5000); // Revisar cada 5 segundos
+
+    return () => clearInterval(pollingInterval);
+  }, [lastUpdate]);
+
+  // Detectar nuevo paciente llamado y reproducir sonido
+  useEffect(() => {
+    const selectedSector = Object.keys(localQueueState.sectors)[0];
+    if (selectedSector) {
+      const sectorData = localQueueState.sectors[selectedSector];
+      const calledPatientsNow: Patient[] = (sectorData as any)?.calledPatients || [];
+      
+      // Si hay pacientes llamados y el más reciente es diferente
+      if (calledPatientsNow.length > 0) {
+        const mostRecent = calledPatientsNow[0]; // Ya vienen ordenados por calledAt
+        if (mostRecent.id !== lastCalledPatientId) {
+          console.log('🆕 Nuevo paciente llamado, reproduciendo sonido:', mostRecent.code);
+          setLastCalledPatientId(mostRecent.id);
+          playNotificationSound();
+        }
+      }
+    }
+  }, [localQueueState]);
+
+  // Trabajar con el primer sector disponible (único sector)
+  const selectedSector = Object.keys(localQueueState.sectors)[0] || null;
+  const sectorData = selectedSector ? localQueueState.sectors[selectedSector] : null;
+  
+  // Obtener TODOS los pacientes llamados (de todos los puestos)
+  const calledPatients: Patient[] = sectorData && (sectorData as any).calledPatients 
+    ? (sectorData as any).calledPatients 
+    : [];
+  
   const waiting = sectorData?.waiting || [];
+  
+  console.log('🎯 [Display] Pacientes llamados:', calledPatients.length);
 
   return (
     <>
@@ -77,156 +164,138 @@ export default function DisplayPage() {
           </div>
         </div>
 
-        {/* Selector de Sector */}
-        {sectors.length > 1 && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            borderRadius: '12px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          }}>
-            {sectors.map((sectorId) => {
-              const sector = queueState.sectors[sectorId];
-              const patient = sector.waiting[0];
-              const sectorName = patient?.sectorDescription || `Sector ${sectorId}`;
-              
-              return (
-                <button
-                  key={sectorId}
-                  onClick={() => setSelectedSector(sectorId)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: selectedSector === sectorId
-                      ? '#E73C3E'
-                      : '#f3f4f6',
-                    color: selectedSector === sectorId ? 'white' : '#374151',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {sectorName} ({sector.waiting.length})
-                </button>
-              );
-            })}
-          </div>
-        )}
 
+        {/* Pacientes llamados - Lista vertical */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '2rem',
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+          marginBottom: '2rem',
         }}>
-          {/* Paciente actual */}
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '3rem',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-            minHeight: '400px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+          <h2 style={{
+            fontSize: '1.75rem',
+            color: '#3B9DD4',
+            marginBottom: '1.5rem',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            textAlign: 'center',
           }}>
-            <h2 style={{
-              fontSize: '2rem',
-              color: '#3B9DD4',
-              marginBottom: '0.5rem',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-            }}>
-              {selectedSector && queueState.sectors[selectedSector]?.waiting[0]?.sectorDescription}
-            </h2>
-            <h3 style={{
-              fontSize: '1rem',
-              color: '#9ca3af',
-              marginBottom: '2rem',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-            }}>
-              Pase a
-            </h3>
-            
-            {current ? (
-              <div className="fade-in" style={{ textAlign: 'center', width: '100%' }}>
-                <div style={{
-                  fontSize: '8rem',
-                  fontWeight: 'bold',
-                  color: '#E73C3E',
-                  marginBottom: '1rem',
-                  animation: 'pulse 2s infinite',
-                  letterSpacing: '8px',
-                }}>
-                  {current.code}
-                </div>
-                <div style={{
-                  fontSize: '2rem',
-                  color: '#1f2937',
-                  fontWeight: '600',
-                  marginBottom: '0.5rem',
-                }}>
-                  {current.name}
-                </div>
-                <div style={{
-                  fontSize: '1.125rem',
-                  color: '#6b7280',
-                }}>
-                  CI: {current.cedula}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-                <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>⏳</div>
-                <p style={{ fontSize: '1.5rem' }}>
-                  En espera...
-                </p>
-              </div>
-            )}
-          </div>
+            {selectedSector && (sectorData?.waiting[0]?.sectorDescription || 'SECTOR A')} - Pase a
+          </h2>
 
-          {/* Cola de espera */}
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-            maxHeight: '80vh',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
+          {calledPatients.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>
+              <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>⏳</div>
+              <p style={{ fontSize: '1.5rem' }}>
+                En espera de llamar pacientes...
+              </p>
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.5rem',
+            }}>
+              {calledPatients.map((patient, index) => {
+                const isLastCalled = index === 0; // El primero es el más reciente
+                
+                return (
+                  <div
+                    key={patient.id}
+                    className={isLastCalled ? 'fade-in' : ''}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: isLastCalled ? '2.5rem 3rem' : '1.5rem 2rem',
+                      background: isLastCalled ? '#fff5f5' : '#f9fafb',
+                      borderRadius: '16px',
+                      border: isLastCalled ? '3px solid #E73C3E' : '2px solid #e5e7eb',
+                      boxShadow: isLastCalled 
+                        ? '0 8px 24px rgba(231, 60, 62, 0.25)' 
+                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    {/* Cédula */}
+                    <div 
+                      className={isLastCalled ? 'pulse' : ''}
+                      style={{
+                        fontSize: isLastCalled ? '4rem' : '2.5rem',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        padding: isLastCalled ? '2rem 3rem' : '1rem 2rem',
+                        background: isLastCalled 
+                          ? 'linear-gradient(135deg, #E73C3E 0%, #C32F31 100%)' 
+                          : '#E73C3E',
+                        borderRadius: '12px',
+                        boxShadow: isLastCalled 
+                          ? '0 8px 24px rgba(231, 60, 62, 0.4)' 
+                          : '0 4px 12px rgba(231, 60, 62, 0.3)',
+                        minWidth: isLastCalled ? '400px' : '300px',
+                      }}
+                    >
+                      CI: {patient.cedula}
+                    </div>
+
+                    {/* Puesto */}
+                    {patient.puesto && (
+                      <div style={{
+                        fontSize: isLastCalled ? '3.5rem' : '2.5rem',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        padding: isLastCalled ? '2rem 3rem' : '1rem 2rem',
+                        background: isLastCalled 
+                          ? 'linear-gradient(135deg, #2C7DA0 0%, #1a5978 100%)' 
+                          : '#2C7DA0',
+                        borderRadius: '12px',
+                        boxShadow: isLastCalled 
+                          ? '0 8px 24px rgba(44, 125, 160, 0.4)' 
+                          : '0 4px 12px rgba(44, 125, 160, 0.3)',
+                      }}>
+                        📍 PUESTO {patient.puesto}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Lista de espera - Abajo */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+        }}>
+          <h2 style={{
+            fontSize: '1.5rem',
+            color: '#3B9DD4',
+            marginBottom: '1.5rem',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
           }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              color: '#3B9DD4',
-              marginBottom: '1.5rem',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-            }}>
-              En Espera ({waiting.length})
-            </h2>
+            Pacientes en Espera ({waiting.length})
+          </h2>
 
+          {waiting.length === 0 ? (
             <div style={{
-              flex: 1,
-              overflowY: 'auto',
+              textAlign: 'center',
+              color: '#9ca3af',
+              padding: '2rem',
             }}>
-              {waiting.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  color: '#9ca3af',
-                  padding: '2rem',
-                }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📋</div>
-                  <p>Sin pacientes en espera</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📋</div>
+              <p>Sin pacientes en espera</p>
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '1rem',
+            }}>
                   {waiting.slice(0, 10).map((patient, index) => (
                     <div
                       key={patient.id}
@@ -245,18 +314,22 @@ export default function DisplayPage() {
                     >
                       <div>
                         <div style={{
-                          fontSize: '1.125rem',
+                          fontSize: '1.25rem',
                           fontWeight: 'bold',
                           color: '#1f2937',
                         }}>
-                          {patient.code}
+                          CI: {patient.cedula}
                         </div>
-                        <div style={{
-                          fontSize: '0.875rem',
-                          color: '#6b7280',
-                        }}>
-                          {patient.name}
-                        </div>
+                        {patient.puesto && (
+                          <div style={{
+                            fontSize: '1rem',
+                            color: '#E73C3E',
+                            fontWeight: 'bold',
+                            marginTop: '0.5rem',
+                          }}>
+                            📍 Puesto {patient.puesto}
+                          </div>
+                        )}
                       </div>
                       <div style={{
                         fontSize: '1.5rem',
@@ -266,11 +339,9 @@ export default function DisplayPage() {
                         #{patient.position}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </main>
     </>
