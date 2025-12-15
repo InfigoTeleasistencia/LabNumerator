@@ -16,11 +16,17 @@ class QueueStore {
   private persistencePath: string;
   private saveTimeout: NodeJS.Timeout | null = null;
 
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private midnightCheckInterval: NodeJS.Timeout | null = null;
+  private lastCleanupDate: string = new Date().toISOString().split('T')[0];
+
   constructor() {
     // Definir ruta de persistencia
     this.persistencePath = path.join(process.cwd(), 'data', 'queue-state.json');
     // Cargar estado al inicializar
     this.loadFromDisk();
+    // Iniciar tareas de limpieza automática
+    this.startAutomaticCleanup();
   }
 
   private initSector(sectorId: string) {
@@ -334,6 +340,138 @@ class QueueStore {
     } catch (error) {
       console.error('❌ Error importando estado:', error);
     }
+  }
+
+  /**
+   * Limpia pacientes que llevan más de 2 horas en la cola o en estado "called"
+   */
+  private cleanupStalePatients() {
+    const now = Date.now();
+    const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 horas
+    let removedCount = 0;
+
+    // Recorrer todos los pacientes
+    Array.from(this.patients.entries()).forEach(([patientId, patient]) => {
+      const age = now - patient.timestamp;
+      
+      // Remover si tiene más de 2 horas
+      if (age > twoHoursInMs) {
+        // Remover de la cola waiting si está ahí
+        const sector = this.sectors.get(patient.sector);
+        if (sector) {
+          const index = sector.waitingQueue.indexOf(patientId);
+          if (index > -1) {
+            sector.waitingQueue.splice(index, 1);
+            removedCount++;
+            console.log(`🧹 Removido paciente obsoleto (waiting): ${patient.code} - ${Math.round(age / 60000)} minutos`);
+          }
+        }
+
+        // Si está en "called", también removerlo
+        if (patient.status === 'called') {
+          patient.status = 'expired';
+          removedCount++;
+          console.log(`🧹 Marcado paciente como expirado (called): ${patient.code} - ${Math.round(age / 60000)} minutos`);
+        }
+
+        // Remover del mapa de pacientes
+        this.patients.delete(patientId);
+      }
+    });
+
+    if (removedCount > 0) {
+      console.log(`🧹 Limpieza completada: ${removedCount} pacientes obsoletos removidos`);
+      this.scheduleSave();
+    }
+  }
+
+  /**
+   * Limpia toda la cola si es un nuevo día
+   */
+  private cleanupIfNewDay() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (today !== this.lastCleanupDate) {
+      console.log(`🌅 Nuevo día detectado (${this.lastCleanupDate} → ${today}). Limpiando cola...`);
+      
+      const beforeCount = this.patients.size;
+      
+      // Limpiar todo excepto pacientes recientes (completados hoy)
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartMs = todayStart.getTime();
+      
+      Array.from(this.patients.entries()).forEach(([patientId, patient]) => {
+        // Solo mantener pacientes completados hoy
+        if (patient.status !== 'completed' || (patient.completedAt || 0) < todayStartMs) {
+          this.patients.delete(patientId);
+        }
+      });
+      
+      // Limpiar colas de sectores
+      this.sectors.forEach((sector, sectorId) => {
+        sector.waitingQueue = [];
+        sector.currentPatientId = null;
+        // Mantener solo recientes del día
+        sector.recentPatients = sector.recentPatients.filter(id => {
+          const patient = this.patients.get(id);
+          return patient && patient.status === 'completed' && (patient.completedAt || 0) >= todayStartMs;
+        });
+      });
+      
+      const afterCount = this.patients.size;
+      console.log(`🌅 Limpieza diaria completada: ${beforeCount - afterCount} pacientes removidos, ${afterCount} mantenidos`);
+      
+      this.lastCleanupDate = today;
+      this.scheduleSave();
+    }
+  }
+
+  /**
+   * Inicia tareas automáticas de limpieza
+   */
+  private startAutomaticCleanup() {
+    // Limpieza de pacientes obsoletos cada 15 minutos
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupStalePatients();
+    }, 15 * 60 * 1000); // 15 minutos
+
+    // Verificar cambio de día cada 5 minutos
+    this.midnightCheckInterval = setInterval(() => {
+      this.cleanupIfNewDay();
+    }, 5 * 60 * 1000); // 5 minutos
+
+    // Ejecutar limpieza inicial inmediatamente
+    this.cleanupIfNewDay();
+    this.cleanupStalePatients();
+    
+    console.log('🔄 Tareas automáticas de limpieza iniciadas');
+    console.log('   - Pacientes obsoletos: cada 15 minutos');
+    console.log('   - Cambio de día: cada 5 minutos');
+  }
+
+  /**
+   * Detiene las tareas automáticas de limpieza (para testing/shutdown)
+   */
+  stopAutomaticCleanup() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    if (this.midnightCheckInterval) {
+      clearInterval(this.midnightCheckInterval);
+      this.midnightCheckInterval = null;
+    }
+    console.log('🛑 Tareas automáticas de limpieza detenidas');
+  }
+
+  /**
+   * Forzar limpieza manual (para testing o admin)
+   */
+  forceCleanup() {
+    console.log('🔧 Limpieza forzada manualmente');
+    this.cleanupStalePatients();
+    this.cleanupIfNewDay();
   }
 }
 

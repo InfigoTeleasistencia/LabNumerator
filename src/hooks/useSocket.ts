@@ -28,25 +28,25 @@ export function useSocket() {
       .then(() => {
         if (!mounted) return;
         console.log('🔌 Conectando cliente Socket.IO...');
-        const socketInstance = io({
+      const socketInstance = io({
           transports: ['polling', 'websocket'],
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionDelayMax: 5000,
           reconnectionAttempts: Infinity,
-        });
+      });
 
         socketRef.current = socketInstance;
 
-        socketInstance.on('connect', () => {
+      socketInstance.on('connect', () => {
           console.log('✅ Conectado a Socket.IO, ID:', socketInstance.id);
-          setIsConnected(true);
-        });
+        setIsConnected(true);
+      });
 
         socketInstance.on('connect_error', (error) => {
           console.error('❌ Error de conexión Socket.IO:', error);
-          setIsConnected(false);
-        });
+        setIsConnected(false);
+      });
 
         socketInstance.on('disconnect', (reason) => {
           console.log('⚠️  Desconectado de Socket.IO. Razón:', reason);
@@ -68,7 +68,7 @@ export function useSocket() {
           console.log('🔄 Intento de reconexión #', attemptNumber);
         });
 
-        socketInstance.on('queue:update', (state: QueueState) => {
+      socketInstance.on('queue:update', (state: QueueState) => {
           const sectorsInfo = Object.entries(state.sectors).map(([id, data]) => ({
             id,
             waiting: data.waiting.length,
@@ -77,14 +77,14 @@ export function useSocket() {
             recent: data.recent.length,
           }));
           console.log('📥 Recibida actualización de cola:', sectorsInfo);
-          setQueueState(state);
-        });
+        setQueueState(state);
+      });
 
-        setSocket(socketInstance);
+      setSocket(socketInstance);
       })
       .catch(error => {
         console.error('❌ Error inicializando Socket.IO:', error);
-      });
+    });
 
     return () => {
       console.log('🔌 Cleanup: Desconectando socket...');

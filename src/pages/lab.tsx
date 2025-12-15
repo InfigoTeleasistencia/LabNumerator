@@ -215,7 +215,7 @@ export default function LabPage() {
                 {sectorData.waiting[0]?.sectorDescription || `Sector ${selectedSector}`}
               </div>
               <div style={{
-                fontSize: '1rem',
+                        fontSize: '1rem',
                 color: '#6b7280',
                 marginTop: '0.25rem',
               }}>
@@ -421,12 +421,12 @@ export default function LabPage() {
                         marginBottom: '0.5rem',
                       }}>
                         <div>
-                          <div style={{
-                            fontSize: '1.5rem',
-                            fontWeight: 'bold',
-                            color: '#1f2937',
-                          }}>
-                            {patient.code}
+                        <div style={{
+                          fontSize: '1.5rem',
+                          fontWeight: 'bold',
+                          color: '#1f2937',
+                        }}>
+                          {patient.code}
                           </div>
                           <div style={{
                             fontSize: '0.875rem',

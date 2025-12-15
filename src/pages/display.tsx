@@ -132,33 +132,51 @@ export default function DisplayPage() {
         background: '#E8F4F8',
         padding: '2rem',
       }}>
-        {/* Header */}
+        {/* Header con logo, reloj centrado y fecha */}
         <div style={{
           background: 'white',
           borderRadius: '16px',
-          padding: '1.5rem',
+          padding: '1.5rem 2rem',
           marginBottom: '2rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          {/* Logo a la izquierda */}
+          <div style={{ flex: '1' }}>
             <img 
               src="/logo.png" 
               alt="Asociación Española Primera en Salud" 
-              style={{ height: '60px' }}
+              style={{ height: '80px' }}
             />
           </div>
-          <div style={{ textAlign: 'right' }}>
+
+          {/* Reloj centrado y grande */}
+          <div style={{
+            flex: '2',
+            textAlign: 'center',
+          }}>
             <div style={{
-              fontSize: '2.5rem',
+              fontSize: '8rem',
               fontWeight: 'bold',
               color: '#1f2937',
+              lineHeight: 1,
             }}>
               {format(currentTime, 'HH:mm')}
             </div>
-            <div style={{ color: '#6b7280', fontSize: '1rem' }}>
+          </div>
+
+          {/* Fecha a la derecha */}
+          <div style={{ 
+            flex: '1', 
+            textAlign: 'right',
+          }}>
+            <div style={{ 
+              color: '#6b7280', 
+              fontSize: '1.75rem',
+              fontWeight: '500',
+            }}>
               {format(currentTime, 'dd/MM/yyyy')}
             </div>
           </div>

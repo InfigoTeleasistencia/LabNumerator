@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import axios from 'axios';
 
 type Status = 'idle' | 'validating' | 'success' | 'error';
 
 export default function ScanPage() {
+  const router = useRouter();
+  const isTestMode = router.query.test === 'true';
+
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
   const [patientName, setPatientName] = useState('');
@@ -488,19 +492,20 @@ export default function ScanPage() {
             ⌂ Inicio
           </Link>
 
-          {/* Panel de Testing */}
-          <div style={{
-            position: 'fixed',
-            bottom: '10px',
-            right: '10px',
-            zIndex: 1000,
-          }}>
-            {/* Botones de test */}
+          {/* Panel de Testing - Solo visible con ?test=true */}
+          {isTestMode && (
             <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: showTestPanel ? '10px' : '0',
+              position: 'fixed',
+              bottom: '10px',
+              right: '10px',
+              zIndex: 1000,
             }}>
+              {/* Botones de test */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: showTestPanel ? '10px' : '0',
+              }}>
               <button
                 onClick={handleTestScan}
                 disabled={status !== 'idle'}
@@ -784,7 +789,8 @@ export default function ScanPage() {
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </>

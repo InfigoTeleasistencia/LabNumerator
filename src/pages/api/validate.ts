@@ -33,15 +33,15 @@ export default async function handler(
     if (testMode && testData) {
       patientData = testData;
     } else {
-      // Validar con el servicio SOAP
-      const validation = await validateCodeWithExternalAPI(code);
+    // Validar con el servicio SOAP
+    const validation = await validateCodeWithExternalAPI(code);
 
-      if (!validation.valid) {
-        return res.status(400).json({ 
-          error: validation.error || 'Código no válido',
-          errorDescription: validation.errorDescription,
-        });
-      }
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        error: validation.error || 'Código no válido',
+        errorDescription: validation.errorDescription,
+      });
+    }
 
       patientData = validation.patient!;
     }
