@@ -33,17 +33,30 @@ export default async function handler(
     if (testMode && testData) {
       patientData = testData;
     } else {
-    // Validar con el servicio SOAP
-    const validation = await validateCodeWithExternalAPI(code);
+      // Validar con el servicio SOAP
+      const validation = await validateCodeWithExternalAPI(code);
 
-    if (!validation.valid) {
-      return res.status(400).json({ 
-        error: validation.error || 'Código no válido',
-        errorDescription: validation.errorDescription,
-      });
-    }
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          error: validation.error || 'Código no válido',
+          errorDescription: validation.errorDescription,
+        });
+      }
 
       patientData = validation.patient!;
+    }
+
+    // Validar que la hora final del turno no haya pasado (aplica para todos los casos)
+    if (patientData.horaFinal) {
+      const horaFinal = new Date(patientData.horaFinal);
+      const ahora = new Date();
+      
+      if (ahora > horaFinal) {
+        return res.status(400).json({
+          error: 'Turno vencido',
+          errorDescription: `El horario de atención finalizó a las ${horaFinal.toLocaleTimeString('es-UY')}. Por favor, solicite un nuevo turno.`,
+        });
+      }
     }
 
     // Agregar a la cola del sector correspondiente

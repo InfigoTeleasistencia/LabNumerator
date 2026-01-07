@@ -12,7 +12,7 @@ export interface Patient {
   horaInicial: string; // HoraInicial
   horaFinal: string; // HoraFinal
   timestamp: number;
-  status: 'waiting' | 'called' | 'attending' | 'completed';
+  status: 'waiting' | 'called' | 'attending' | 'completed' | 'expired';
   calledAt?: number;
   completedAt?: number;
   position?: number;
