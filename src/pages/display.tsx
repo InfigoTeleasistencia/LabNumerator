@@ -122,43 +122,66 @@ export default function DisplayPage() {
   
   console.log('🎯 [Display] Pacientes llamados:', calledPatients.length);
 
+  // Obtener nombre del sector
+  const sectorName = sectorData?.waiting[0]?.sectorDescription || 
+                     calledPatients[0]?.sectorDescription || 
+                     'LABORATORIO';
+
+  // Limitar pacientes llamados a 5 para que quepan en pantalla
+  const displayedPatients = calledPatients.slice(0, 5);
+
   return (
     <>
       <Head>
         <title>Pantalla de Atención - Asociación Española</title>
       </Head>
       <main style={{
-        minHeight: '100vh',
+        height: '100vh',
         background: '#E8F4F8',
-        padding: '2rem',
+        padding: '1rem 1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
-        {/* Header con logo, reloj centrado y fecha */}
+        {/* Header compacto con logo, sector, reloj y fecha */}
         <div style={{
           background: 'white',
-          borderRadius: '16px',
-          padding: '1.5rem 2rem',
-          marginBottom: '2rem',
+          borderRadius: '12px',
+          padding: '0.75rem 1.5rem',
+          marginBottom: '1rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+          flexShrink: 0,
         }}>
           {/* Logo a la izquierda */}
-          <div style={{ flex: '1' }}>
+          <div style={{ flex: '1', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <img 
               src="/logo.png" 
               alt="Asociación Española Primera en Salud" 
-              style={{ height: '80px' }}
+              style={{ height: '60px' }}
             />
+            {/* Título del sector */}
+            <div style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: '#3B9DD4',
+              textTransform: 'uppercase',
+              borderLeft: '3px solid #3B9DD4',
+              paddingLeft: '1rem',
+            }}>
+              {sectorName}
+            </div>
           </div>
 
-          {/* Reloj centrado y grande */}
+          {/* Reloj centrado */}
           <div style={{
-            flex: '2',
+            flex: '1',
             textAlign: 'center',
           }}>
             <div style={{
-              fontSize: '8rem',
+              fontSize: '4rem',
               fontWeight: 'bold',
               color: '#1f2937',
               lineHeight: 1,
@@ -174,37 +197,57 @@ export default function DisplayPage() {
           }}>
             <div style={{ 
               color: '#6b7280', 
-              fontSize: '1.75rem',
+              fontSize: '1.25rem',
               fontWeight: '500',
             }}>
               {format(currentTime, 'dd/MM/yyyy')}
             </div>
+            {waiting.length > 0 && (
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: '0.875rem',
+                marginTop: '0.25rem',
+              }}>
+                {waiting.length} en espera
+              </div>
+            )}
           </div>
         </div>
 
-
-        {/* Pacientes llamados - Lista vertical */}
+        {/* Área principal - Pacientes llamados */}
         <div style={{
           background: 'white',
-          borderRadius: '16px',
-          padding: '2rem',
+          borderRadius: '12px',
+          padding: '1.25rem',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-          marginBottom: '2rem',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}>
           <h2 style={{
-            fontSize: '1.75rem',
-            color: '#3B9DD4',
-            marginBottom: '1.5rem',
+            fontSize: '1.25rem',
+            color: '#E73C3E',
+            marginBottom: '1rem',
             fontWeight: 'bold',
             textTransform: 'uppercase',
             textAlign: 'center',
+            flexShrink: 0,
           }}>
-            {selectedSector && (sectorData?.waiting[0]?.sectorDescription || 'SECTOR A')} - Pase a
+            🔔 Pase a Box
           </h2>
 
-          {calledPatients.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#9ca3af', padding: '3rem' }}>
-              <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>⏳</div>
+          {displayedPatients.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              color: '#9ca3af', 
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
               <p style={{ fontSize: '1.5rem' }}>
                 En espera de llamar pacientes...
               </p>
@@ -213,9 +256,11 @@ export default function DisplayPage() {
             <div style={{ 
               display: 'flex',
               flexDirection: 'column',
-              gap: '1.5rem',
+              gap: '0.75rem',
+              flex: 1,
+              justifyContent: 'flex-start',
             }}>
-              {calledPatients.map((patient, index) => {
+              {displayedPatients.map((patient, index) => {
                 const isLastCalled = index === 0; // El primero es el más reciente
                 
                 return (
@@ -226,55 +271,65 @@ export default function DisplayPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: isLastCalled ? '2.5rem 3rem' : '1.5rem 2rem',
+                      padding: isLastCalled ? '1.25rem 2rem' : '0.75rem 1.5rem',
                       background: isLastCalled ? '#fff5f5' : '#f9fafb',
-                      borderRadius: '16px',
+                      borderRadius: '12px',
                       border: isLastCalled ? '3px solid #E73C3E' : '2px solid #e5e7eb',
                       boxShadow: isLastCalled 
-                        ? '0 8px 24px rgba(231, 60, 62, 0.25)' 
-                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        ? '0 6px 20px rgba(231, 60, 62, 0.25)' 
+                        : '0 2px 6px rgba(0, 0, 0, 0.05)',
                       transition: 'all 0.3s ease',
+                      flexShrink: 0,
                     }}
                   >
                     {/* Cédula */}
                     <div 
                       className={isLastCalled ? 'pulse' : ''}
                       style={{
-                        fontSize: isLastCalled ? '4rem' : '2.5rem',
+                        fontSize: isLastCalled ? '2.5rem' : '1.75rem',
                         color: 'white',
                         fontWeight: 'bold',
-                        padding: isLastCalled ? '2rem 3rem' : '1rem 2rem',
+                        padding: isLastCalled ? '1rem 2rem' : '0.5rem 1.25rem',
                         background: isLastCalled 
                           ? 'linear-gradient(135deg, #E73C3E 0%, #C32F31 100%)' 
                           : '#E73C3E',
-                        borderRadius: '12px',
+                        borderRadius: '10px',
                         boxShadow: isLastCalled 
-                          ? '0 8px 24px rgba(231, 60, 62, 0.4)' 
-                          : '0 4px 12px rgba(231, 60, 62, 0.3)',
-                        minWidth: isLastCalled ? '400px' : '300px',
+                          ? '0 6px 16px rgba(231, 60, 62, 0.4)' 
+                          : '0 3px 8px rgba(231, 60, 62, 0.3)',
+                        minWidth: isLastCalled ? '280px' : '220px',
+                        textAlign: 'center',
                       }}
                     >
                       CI: {patient.cedula}
                     </div>
 
+                    {/* Flecha indicadora */}
+                    <div style={{
+                      fontSize: isLastCalled ? '2.5rem' : '1.5rem',
+                      color: isLastCalled ? '#E73C3E' : '#9ca3af',
+                    }}>
+                      ➜
+                    </div>
+
                     {/* Puesto */}
-                    {patient.puesto && (
-                      <div style={{
-                        fontSize: isLastCalled ? '3.5rem' : '2.5rem',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        padding: isLastCalled ? '2rem 3rem' : '1rem 2rem',
-                        background: isLastCalled 
-                          ? 'linear-gradient(135deg, #2C7DA0 0%, #1a5978 100%)' 
-                          : '#2C7DA0',
-                        borderRadius: '12px',
-                        boxShadow: isLastCalled 
-                          ? '0 8px 24px rgba(44, 125, 160, 0.4)' 
-                          : '0 4px 12px rgba(44, 125, 160, 0.3)',
-                      }}>
-                        📍 PUESTO {patient.puesto}
-                      </div>
-                    )}
+                    <div style={{
+                      fontSize: isLastCalled ? '2.5rem' : '1.75rem',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      padding: isLastCalled ? '1rem 2rem' : '0.5rem 1.25rem',
+                      background: isLastCalled 
+                        ? 'linear-gradient(135deg, #2C7DA0 0%, #1a5978 100%)' 
+                        : '#2C7DA0',
+                      borderRadius: '10px',
+                      boxShadow: isLastCalled 
+                        ? '0 6px 16px rgba(44, 125, 160, 0.4)' 
+                        : '0 3px 8px rgba(44, 125, 160, 0.3)',
+                      minWidth: isLastCalled ? '200px' : '150px',
+                      textAlign: 'center',
+                    }}>
+                      BOX {patient.puesto || '?'}
+                    </div>
                   </div>
                 );
               })}
@@ -282,85 +337,69 @@ export default function DisplayPage() {
           )}
         </div>
 
-        {/* Lista de espera - Abajo */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '2rem',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-        }}>
-          <h2 style={{
-            fontSize: '1.5rem',
-            color: '#3B9DD4',
-            marginBottom: '1.5rem',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
+        {/* Barra inferior - Próximos a atender */}
+        {waiting.length > 0 && (
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '0.75rem 1.5rem',
+            marginTop: '1rem',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+            flexShrink: 0,
           }}>
-            Pacientes en Espera ({waiting.length})
-          </h2>
-
-          {waiting.length === 0 ? (
             <div style={{
-              textAlign: 'center',
-              color: '#9ca3af',
-              padding: '2rem',
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📋</div>
-              <p>Sin pacientes en espera</p>
-            </div>
-          ) : (
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              display: 'flex',
+              alignItems: 'center',
               gap: '1rem',
             }}>
-                  {waiting.slice(0, 10).map((patient, index) => (
-                    <div
-                      key={patient.id}
-                      className="fade-in"
-                      style={{
-                        padding: '1rem',
-                        background: index === 0 
-                          ? '#FFF5E6'
-                          : '#f9fafb',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        border: index === 0 ? '2px solid #FCD116' : '1px solid #e5e7eb',
-                      }}
-                    >
-                      <div>
-                        <div style={{
-                          fontSize: '1.25rem',
-                          fontWeight: 'bold',
-                          color: '#1f2937',
-                        }}>
-                          CI: {patient.cedula}
-                        </div>
-                        {patient.puesto && (
-                          <div style={{
-                            fontSize: '1rem',
-                            color: '#E73C3E',
-                            fontWeight: 'bold',
-                            marginTop: '0.5rem',
-                          }}>
-                            📍 Puesto {patient.puesto}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
-                        color: index === 0 ? '#E73C3E' : '#9ca3af',
-                      }}>
-                        #{patient.position}
-                      </div>
-                    </div>
-              ))}
+              <span style={{
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                color: '#3B9DD4',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}>
+                📋 Próximos:
+              </span>
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                flex: 1,
+                overflow: 'hidden',
+              }}>
+                {waiting.slice(0, 6).map((patient, index) => (
+                  <div
+                    key={patient.id}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: index === 0 ? '#FFF5E6' : '#f3f4f6',
+                      borderRadius: '8px',
+                      border: index === 0 ? '2px solid #FCD116' : '1px solid #e5e7eb',
+                      fontSize: '1rem',
+                      fontWeight: index === 0 ? 'bold' : '500',
+                      color: index === 0 ? '#1f2937' : '#6b7280',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {index === 0 ? '➤ ' : ''}{patient.cedula}
+                  </div>
+                ))}
+                {waiting.length > 6 && (
+                  <div style={{
+                    padding: '0.5rem 1rem',
+                    background: '#f3f4f6',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    color: '#9ca3af',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    +{waiting.length - 6} más
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
     </>
   );
