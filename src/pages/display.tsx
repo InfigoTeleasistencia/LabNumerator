@@ -304,14 +304,6 @@ export default function DisplayPage() {
                       CI: {patient.cedula}
                     </div>
 
-                    {/* Flecha indicadora */}
-                    <div style={{
-                      fontSize: isLastCalled ? '2.5rem' : '1.5rem',
-                      color: isLastCalled ? '#E73C3E' : '#9ca3af',
-                    }}>
-                      ➜
-                    </div>
-
                     {/* Puesto */}
                     <div style={{
                       fontSize: isLastCalled ? '2.5rem' : '1.75rem',
