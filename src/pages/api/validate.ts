@@ -48,13 +48,29 @@ export default async function handler(
 
     // Validar que la hora final del turno no haya pasado (aplica para todos los casos)
     if (patientData.horaFinal) {
-      const horaFinal = new Date(patientData.horaFinal);
       const ahora = new Date();
+      let horaFinal: Date;
       
-      if (ahora > horaFinal) {
+      // Manejar diferentes formatos de hora
+      if (patientData.horaFinal.includes('T') || patientData.horaFinal.includes('-')) {
+        // Formato ISO completo (ej: "2026-01-08T10:00:00")
+        horaFinal = new Date(patientData.horaFinal);
+      } else {
+        // Formato solo hora "HH:mm" - construir fecha completa con hoy
+        const [hours, minutes] = patientData.horaFinal.split(':').map(Number);
+        horaFinal = new Date();
+        horaFinal.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Verificar que la fecha sea válida
+      if (!isNaN(horaFinal.getTime()) && ahora > horaFinal) {
+        const horaFormateada = horaFinal.toLocaleTimeString('es-UY', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
         return res.status(400).json({
           error: 'Turno vencido',
-          errorDescription: `El horario de atención finalizó a las ${horaFinal.toLocaleTimeString('es-UY')}. Por favor, solicite un nuevo turno.`,
+          errorDescription: `El horario de atención finalizó a las ${horaFormateada}. Por favor, solicite un nuevo turno.`,
         });
       }
     }
