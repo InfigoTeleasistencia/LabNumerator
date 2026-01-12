@@ -31,18 +31,22 @@ export default async function handler(
 
     // Si es modo test, usar los datos de prueba
     if (testMode && testData) {
+      console.log('🧪 Modo TEST - datos recibidos:', JSON.stringify(testData, null, 2));
       patientData = testData;
     } else {
       // Validar con el servicio SOAP
+      console.log('📡 Llamando servicio SOAP para código:', code);
       const validation = await validateCodeWithExternalAPI(code);
 
       if (!validation.valid) {
+        console.log('❌ Validación SOAP fallida:', validation.error, validation.errorDescription);
         return res.status(400).json({ 
           error: validation.error || 'Código no válido',
           errorDescription: validation.errorDescription,
         });
       }
 
+      console.log('✅ Validación SOAP exitosa - datos del paciente:', JSON.stringify(validation.patient, null, 2));
       patientData = validation.patient!;
     }
 

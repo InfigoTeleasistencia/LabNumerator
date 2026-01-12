@@ -47,6 +47,9 @@ export async function validateBarcodeWithSOAP(labOSNro: string): Promise<Validat
     // Navegar por la estructura SOAP
     const executeResponse = result?.Envelope?.Body?.['labwbs01.ExecuteResponse'];
     
+    // Log completo de la respuesta del servicio
+    console.log('📥 Respuesta SOAP completa:', JSON.stringify(executeResponse, null, 2));
+    
     if (!executeResponse) {
       throw new Error('Respuesta SOAP inválida');
     }
@@ -60,17 +63,15 @@ export async function validateBarcodeWithSOAP(labOSNro: string): Promise<Validat
       };
     }
 
-    // Validar que la hora final no haya pasado
-    const horaFinal = new Date(executeResponse.Horafinal);
-    const ahora = new Date();
-    
-    if (ahora > horaFinal) {
-      return {
-        valid: false,
-        error: 'Turno vencido',
-        errorDescription: `El horario de atención finalizó a las ${horaFinal.toLocaleTimeString('es-UY')}`,
-      };
-    }
+    // Log específico de campos de hora
+    console.log('🕐 Datos de hora del servicio:', {
+      Horainicial: executeResponse.Horainicial,
+      Horafinal: executeResponse.Horafinal,
+      Fecha: executeResponse.Fecha,
+    });
+
+    // NOTA: La validación de hora se hace en validate.ts con zona horaria de Uruguay
+    // No validamos aquí para evitar duplicación y problemas de timezone
 
     // Validar campos obligatorios
     if (!executeResponse.Nombre || !executeResponse.Sector) {
