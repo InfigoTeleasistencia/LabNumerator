@@ -48,40 +48,41 @@ export default async function handler(
 
     // Validar que la hora final del turno no haya pasado (aplica para todos los casos)
     if (patientData.horaFinal) {
-      const ahora = new Date();
-      let horaFinal: Date;
+      // Obtener hora actual en Uruguay (UTC-3)
+      const ahoraUruguay = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' }));
+      
+      let horaFinalHours: number;
+      let horaFinalMinutes: number;
       
       // Manejar diferentes formatos de hora
-      if (patientData.horaFinal.includes('T') || patientData.horaFinal.includes('-')) {
-        // Formato ISO completo (ej: "2026-01-08T10:00:00")
-        horaFinal = new Date(patientData.horaFinal);
+      if (patientData.horaFinal.includes('T')) {
+        // Formato ISO completo - extraer solo la hora
+        const timePart = patientData.horaFinal.split('T')[1];
+        [horaFinalHours, horaFinalMinutes] = timePart.split(':').map(Number);
       } else {
-        // Formato solo hora "HH:mm" - construir fecha completa con hoy
-        const [hours, minutes] = patientData.horaFinal.split(':').map(Number);
-        horaFinal = new Date();
-        horaFinal.setHours(hours, minutes, 0, 0);
+        // Formato solo hora "HH:mm" o "HH:mm:ss"
+        [horaFinalHours, horaFinalMinutes] = patientData.horaFinal.split(':').map(Number);
       }
       
-      // Log para diagnóstico de zona horaria
-      console.log('🕐 Validación de hora:', {
+      // Construir hora final como fecha de hoy en Uruguay
+      const horaFinalUruguay = new Date(ahoraUruguay);
+      horaFinalUruguay.setHours(horaFinalHours, horaFinalMinutes, 0, 0);
+      
+      // Log para diagnóstico
+      console.log('🕐 Validación de hora (Uruguay):', {
         horaFinalRecibida: patientData.horaFinal,
-        horaFinalParsed: horaFinal.toISOString(),
-        horaFinalLocal: horaFinal.toLocaleString('es-UY'),
-        ahoraISO: ahora.toISOString(),
-        ahoraLocal: ahora.toLocaleString('es-UY'),
-        diferenciaMs: ahora.getTime() - horaFinal.getTime(),
-        diferenciaMin: Math.round((ahora.getTime() - horaFinal.getTime()) / 60000),
+        horaFinalParsed: `${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
+        ahoraUruguay: ahoraUruguay.toLocaleTimeString('es-UY'),
+        horaFinalUruguay: horaFinalUruguay.toLocaleTimeString('es-UY'),
+        diferenciaMin: Math.round((ahoraUruguay.getTime() - horaFinalUruguay.getTime()) / 60000),
       });
       
       // Margen de tolerancia de 5 minutos para evitar problemas de sincronización
       const margenToleranciaMs = 5 * 60 * 1000; // 5 minutos
       
-      // Verificar que la fecha sea válida y que haya pasado más del margen de tolerancia
-      if (!isNaN(horaFinal.getTime()) && (ahora.getTime() - horaFinal.getTime()) > margenToleranciaMs) {
-        const horaFormateada = horaFinal.toLocaleTimeString('es-UY', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
+      // Verificar que haya pasado más del margen de tolerancia
+      if ((ahoraUruguay.getTime() - horaFinalUruguay.getTime()) > margenToleranciaMs) {
+        const horaFormateada = `${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}`;
         console.log('❌ Turno vencido - rechazando paciente');
         return res.status(400).json({
           error: 'Turno vencido',
