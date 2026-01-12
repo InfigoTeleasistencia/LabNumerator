@@ -62,12 +62,27 @@ export default async function handler(
         horaFinal.setHours(hours, minutes, 0, 0);
       }
       
-      // Verificar que la fecha sea válida
-      if (!isNaN(horaFinal.getTime()) && ahora > horaFinal) {
+      // Log para diagnóstico de zona horaria
+      console.log('🕐 Validación de hora:', {
+        horaFinalRecibida: patientData.horaFinal,
+        horaFinalParsed: horaFinal.toISOString(),
+        horaFinalLocal: horaFinal.toLocaleString('es-UY'),
+        ahoraISO: ahora.toISOString(),
+        ahoraLocal: ahora.toLocaleString('es-UY'),
+        diferenciaMs: ahora.getTime() - horaFinal.getTime(),
+        diferenciaMin: Math.round((ahora.getTime() - horaFinal.getTime()) / 60000),
+      });
+      
+      // Margen de tolerancia de 5 minutos para evitar problemas de sincronización
+      const margenToleranciaMs = 5 * 60 * 1000; // 5 minutos
+      
+      // Verificar que la fecha sea válida y que haya pasado más del margen de tolerancia
+      if (!isNaN(horaFinal.getTime()) && (ahora.getTime() - horaFinal.getTime()) > margenToleranciaMs) {
         const horaFormateada = horaFinal.toLocaleTimeString('es-UY', { 
           hour: '2-digit', 
           minute: '2-digit' 
         });
+        console.log('❌ Turno vencido - rechazando paciente');
         return res.status(400).json({
           error: 'Turno vencido',
           errorDescription: `El horario de atención finalizó a las ${horaFormateada}. Por favor, solicite un nuevo turno.`,

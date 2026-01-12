@@ -689,35 +689,57 @@ export default function ScanPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
-                        Hora Inicial
+                        Hora Inicial (HH:mm)
                       </label>
                       <input
-                        type="time"
+                        type="text"
+                        placeholder="08:00"
+                        pattern="[0-2][0-9]:[0-5][0-9]"
+                        maxLength={5}
                         value={testFormData.horaInicial}
-                        onChange={(e) => setTestFormData({ ...testFormData, horaInicial: e.target.value })}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/[^0-9:]/g, '');
+                          // Auto-agregar : después de 2 dígitos
+                          if (value.length === 2 && !value.includes(':')) {
+                            value = value + ':';
+                          }
+                          setTestFormData({ ...testFormData, horaInicial: value });
+                        }}
                         style={{
                           width: '100%',
                           padding: '0.5rem',
                           borderRadius: '6px',
                           border: '1px solid #d1d5db',
                           fontSize: '0.875rem',
+                          fontFamily: 'monospace',
                         }}
                       />
                     </div>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
-                        Hora Final
+                        Hora Final (HH:mm)
                       </label>
                       <input
-                        type="time"
+                        type="text"
+                        placeholder="14:00"
+                        pattern="[0-2][0-9]:[0-5][0-9]"
+                        maxLength={5}
                         value={testFormData.horaFinal}
-                        onChange={(e) => setTestFormData({ ...testFormData, horaFinal: e.target.value })}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/[^0-9:]/g, '');
+                          // Auto-agregar : después de 2 dígitos
+                          if (value.length === 2 && !value.includes(':')) {
+                            value = value + ':';
+                          }
+                          setTestFormData({ ...testFormData, horaFinal: value });
+                        }}
                         style={{
                           width: '100%',
                           padding: '0.5rem',
                           borderRadius: '6px',
                           border: '1px solid #d1d5db',
                           fontSize: '0.875rem',
+                          fontFamily: 'monospace',
                         }}
                       />
                     </div>
