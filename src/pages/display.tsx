@@ -11,14 +11,49 @@ export default function DisplayPage() {
   const [localQueueState, setLocalQueueState] = useState(queueState);
   const [lastCalledPatientId, setLastCalledPatientId] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
-  // Actualizar reloj cada segundo
+  // Sincronizar con la hora del servidor
+  const syncServerTime = async () => {
+    try {
+      const clientTimeBefore = Date.now();
+      const response = await axios.get('/api/time');
+      const clientTimeAfter = Date.now();
+      
+      // Calcular la latencia aproximada (ida y vuelta / 2)
+      const latency = (clientTimeAfter - clientTimeBefore) / 2;
+      
+      // Calcular el offset entre servidor y cliente
+      const serverTimestamp = response.data.timestamp;
+      const offset = serverTimestamp - clientTimeAfter + latency;
+      
+      setServerTimeOffset(offset);
+      console.log('🕐 [Display] Hora sincronizada con servidor. Offset:', offset, 'ms');
+    } catch (error) {
+      console.error('❌ [Display] Error sincronizando hora:', error);
+    }
+  };
+
+  // Sincronizar hora al inicio y cada 5 minutos
+  useEffect(() => {
+    // Sincronizar inmediatamente al cargar
+    syncServerTime();
+    
+    // Re-sincronizar cada 5 minutos para mantener precisión
+    const syncInterval = setInterval(syncServerTime, 5 * 60 * 1000);
+    
+    return () => clearInterval(syncInterval);
+  }, []);
+
+  // Actualizar reloj cada segundo usando el offset del servidor
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      // Aplicar el offset para mostrar la hora del servidor
+      const serverAdjustedTime = new Date(Date.now() + serverTimeOffset);
+      setCurrentTime(serverAdjustedTime);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [serverTimeOffset]);
 
   // Función para reproducir sonido de notificación
   const playNotificationSound = () => {
