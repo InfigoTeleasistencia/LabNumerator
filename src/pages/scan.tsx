@@ -32,7 +32,7 @@ export default function ScanPage() {
     sectorDescripcion: 'SECTOR A',
   });
 
-  // Genera datos aleatorios para testing
+  // Genera datos aleatorios para testing (formato igual al servicio SOAP)
   const generateRandomTestData = () => {
     const firstNames = [
       'Juan',
@@ -67,16 +67,19 @@ export default function ScanPage() {
     const digito = Math.floor(Math.random() * 10);
     const code = `TEST${Date.now()}`;
 
-    // Fechas aleatorias para hoy
+    // Generar fecha y horas en formato ISO igual al servicio SOAP
     const now = new Date();
-    const horaInicial = `${String(Math.floor(8 + Math.random() * 4)).padStart(
-      2,
-      '0'
-    )}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
-    const horaFinal = `${String(Math.floor(12 + Math.random() * 4)).padStart(
-      2,
-      '0'
-    )}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+    const fecha = now.toISOString().split('T')[0]; // "2026-02-04"
+    
+    // Hora inicial aleatoria entre 8:00 y 12:00
+    const horaInicialH = Math.floor(8 + Math.random() * 4);
+    const horaInicialM = Math.floor(Math.random() * 60);
+    const horaInicial = `${fecha}T${String(horaInicialH).padStart(2, '0')}:${String(horaInicialM).padStart(2, '0')}:00`;
+    
+    // Hora final = hora inicial + 20 minutos
+    const horaFinalH = horaInicialM + 20 >= 60 ? horaInicialH + 1 : horaInicialH;
+    const horaFinalM = (horaInicialM + 20) % 60;
+    const horaFinal = `${fecha}T${String(horaFinalH).padStart(2, '0')}:${String(horaFinalM).padStart(2, '0')}:00`;
 
     return {
       code,
@@ -89,7 +92,7 @@ export default function ScanPage() {
       depDescripcion: 'LABORATORIO',
       sector: 151,
       secDescripcion: 'SECTOR A',
-      fecha: now.toISOString().split('T')[0],
+      fecha,
       horaInicial,
       horaFinal,
     };
@@ -103,6 +106,12 @@ export default function ScanPage() {
 
   const handleCustomTestScan = async () => {
     const now = new Date();
+    const fecha = now.toISOString().split('T')[0]; // "2026-02-04"
+    
+    // Convertir HH:mm a formato ISO completo como el servicio SOAP
+    const horaInicial = `${fecha}T${testFormData.horaInicial}:00`;
+    const horaFinal = `${fecha}T${testFormData.horaFinal}:00`;
+    
     const testData = {
       code: `TEST${Date.now()}`,
       name: `${testFormData.nombre} ${testFormData.apellido1} ${testFormData.apellido2}`,
@@ -114,9 +123,9 @@ export default function ScanPage() {
       depDescripcion: 'LABORATORIO',
       sector: parseInt(testFormData.sector),
       secDescripcion: testFormData.sectorDescripcion,
-      fecha: now.toISOString().split('T')[0],
-      horaInicial: testFormData.horaInicial,
-      horaFinal: testFormData.horaFinal,
+      fecha,
+      horaInicial,
+      horaFinal,
     };
 
     console.log('Test scan con datos personalizados:', testData);
