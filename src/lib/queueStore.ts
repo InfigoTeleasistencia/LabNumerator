@@ -49,18 +49,59 @@ class QueueStore {
   }
 
   /**
+   * Extrae información de turno (timestamp o minutos) desde horaInicial/fecha.
+   * Maneja valores "HH:mm" y fechas completas ISO.
+   */
+  private getTurnInfo(patient: Patient): { timestamp: number | null; minutes: number | null } {
+    const rawTime = patient.horaInicial?.trim();
+    if (!rawTime) {
+      return { timestamp: null, minutes: null };
+    }
+
+    const isTimeOnly = /^\d{2}:\d{2}(:\d{2})?$/.test(rawTime);
+    if (isTimeOnly) {
+      const minutes = this.timeToMinutes(rawTime);
+      if (patient.fecha) {
+        const timeWithSeconds = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+        const combined = `${patient.fecha}T${timeWithSeconds}`;
+        const parsed = new Date(combined);
+        const timestamp = Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+        return { timestamp, minutes };
+      }
+      return { timestamp: null, minutes };
+    }
+
+    const parsed = new Date(rawTime);
+    if (!Number.isNaN(parsed.getTime())) {
+      return { timestamp: parsed.getTime(), minutes: null };
+    }
+
+    return { timestamp: null, minutes: null };
+  }
+
+  /**
    * Compara dos pacientes por su horario de turno (horaInicial)
    * Retorna: -1 si p1 va antes, 1 si p2 va antes, 0 si son iguales
    */
   private comparePatientsByTurn(p1: Patient, p2: Patient): number {
-    const time1 = this.timeToMinutes(p1.horaInicial);
-    const time2 = this.timeToMinutes(p2.horaInicial);
-    
-    if (time1 < time2) return -1;
-    if (time1 > time2) return 1;
-    
-    // Si tienen la misma horaInicial, ordenar por fecha (si aplica)
-    // o por timestamp de llegada al sistema
+    const info1 = this.getTurnInfo(p1);
+    const info2 = this.getTurnInfo(p2);
+
+    if (info1.timestamp !== null && info2.timestamp !== null) {
+      if (info1.timestamp < info2.timestamp) return -1;
+      if (info1.timestamp > info2.timestamp) return 1;
+    } else if (info1.timestamp !== null && info2.timestamp === null) {
+      return -1;
+    } else if (info1.timestamp === null && info2.timestamp !== null) {
+      return 1;
+    }
+
+    if (info1.minutes !== null && info2.minutes !== null) {
+      if (info1.minutes < info2.minutes) return -1;
+      if (info1.minutes > info2.minutes) return 1;
+    }
+
+    // Si tienen la misma horaInicial, ordenar por timestamp de llegada al sistema
     return p1.timestamp - p2.timestamp;
   }
 

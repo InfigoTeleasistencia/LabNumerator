@@ -11,6 +11,41 @@ export default function LabPage() {
   const { isConnected, queueState } = useSocket();
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  const parseTurnDateTime = (dateValue?: string, timeValue?: string) => {
+    if (!timeValue) return null;
+    const trimmed = timeValue.trim();
+    const isTimeOnly = /^\d{2}:\d{2}(:\d{2})?$/.test(trimmed);
+    if (isTimeOnly) {
+      if (!dateValue) return null;
+      const timeWithSeconds = trimmed.length === 5 ? `${trimmed}:00` : trimmed;
+      const parsed = new Date(`${dateValue}T${timeWithSeconds}`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const formatTurnRange = (patient: any) => {
+    const start = parseTurnDateTime(patient.fecha, patient.horaInicial);
+    const end = parseTurnDateTime(patient.fecha, patient.horaFinal);
+
+    if (start && end) {
+      const startDate = format(start, 'dd/MM/yyyy');
+      const startTime = format(start, 'HH:mm');
+      const endDate = format(end, 'dd/MM/yyyy');
+      const endTime = format(end, 'HH:mm');
+      return startDate === endDate
+        ? `${startDate} ${startTime} - ${endTime}`
+        : `${startDate} ${startTime} - ${endDate} ${endTime}`;
+    }
+
+    if (patient.horaInicial && patient.horaFinal) {
+      return `${patient.horaInicial} - ${patient.horaFinal}`;
+    }
+
+    return patient.horaInicial || patient.horaFinal || '-';
+  };
   
   // Extraer número de puesto de la URL (ej: /lab?puesto=1 o /lab/1)
   const puestoNumber = router.query.puesto 
@@ -434,7 +469,7 @@ export default function LabPage() {
                             fontWeight: 'bold',
                             marginTop: '0.25rem',
                           }}>
-                            🕐 Turno: {patient.horaInicial} - {patient.horaFinal}
+                            🕐 Turno: {formatTurnRange(patient)}
                           </div>
                         </div>
                         <div style={{
