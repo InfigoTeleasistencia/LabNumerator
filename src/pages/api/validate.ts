@@ -55,9 +55,11 @@ export default async function handler(
       // Obtener fecha/hora actual real (del servidor)
       const ahora = new Date();
       
-      let horaFinalDate: Date;
       let horaFinalHours: number;
       let horaFinalMinutes: number;
+      let fechaTurnoYear: number;
+      let fechaTurnoMonth: number;
+      let fechaTurnoDay: number;
       let fechaTurno: string;
       
       // Manejar diferentes formatos de hora
@@ -65,24 +67,32 @@ export default async function handler(
         // Formato ISO completo (ej: "2026-02-04T14:00:00") - usar fecha y hora completas
         const [datePart, timePart] = patientData.horaFinal.split('T');
         fechaTurno = datePart;
+        const [year, month, day] = datePart.split('-').map(Number);
+        fechaTurnoYear = year;
+        fechaTurnoMonth = month - 1; // Los meses en JS son 0-indexed
+        fechaTurnoDay = day;
         [horaFinalHours, horaFinalMinutes] = timePart.split(':').map(Number);
-        
-        // Construir la fecha/hora completa del turno (se interpreta como hora local del servidor)
-        horaFinalDate = new Date(`${datePart}T${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}:00`);
       } else {
         // Formato solo hora "HH:mm" o "HH:mm:ss" - usar fecha del campo fecha o de hoy
         [horaFinalHours, horaFinalMinutes] = patientData.horaFinal.split(':').map(Number);
         
         if (patientData.fecha) {
           fechaTurno = patientData.fecha;
+          const [year, month, day] = patientData.fecha.split('-').map(Number);
+          fechaTurnoYear = year;
+          fechaTurnoMonth = month - 1;
+          fechaTurnoDay = day;
         } else {
           // Usar fecha de hoy
-          fechaTurno = ahora.toISOString().split('T')[0];
+          fechaTurnoYear = ahora.getFullYear();
+          fechaTurnoMonth = ahora.getMonth();
+          fechaTurnoDay = ahora.getDate();
+          fechaTurno = `${fechaTurnoYear}-${String(fechaTurnoMonth + 1).padStart(2, '0')}-${String(fechaTurnoDay).padStart(2, '0')}`;
         }
-        
-        // Construir hora final usando la fecha del turno
-        horaFinalDate = new Date(`${fechaTurno}T${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}:00`);
       }
+      
+      // Construir fecha/hora del turno usando componentes locales (evita problemas de timezone)
+      const horaFinalDate = new Date(fechaTurnoYear, fechaTurnoMonth, fechaTurnoDay, horaFinalHours, horaFinalMinutes, 0);
       
       const diferenciaMin = Math.round((ahora.getTime() - horaFinalDate.getTime()) / 60000);
       
@@ -92,8 +102,8 @@ export default async function handler(
         fechaRecibida: patientData.fecha,
         fechaTurnoUsada: fechaTurno,
         horaFinalParsed: `${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
-        ahora: ahora.toISOString(),
-        horaFinalDate: horaFinalDate.toISOString(),
+        ahoraLocal: ahora.toLocaleString('es-UY'),
+        horaFinalLocal: horaFinalDate.toLocaleString('es-UY'),
         diferenciaMin,
         turnoVencido: diferenciaMin > 5,
       });
