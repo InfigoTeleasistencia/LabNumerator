@@ -51,9 +51,28 @@ export default async function handler(
     }
 
     // Validar que la hora final del turno no haya pasado (aplica para todos los casos)
+    // IMPORTANTE: Todas las horas del servicio SOAP vienen en timezone Uruguay (UTC-3)
     if (patientData.horaFinal) {
-      // Obtener fecha/hora actual real (del servidor)
-      const ahora = new Date();
+      // Obtener hora actual en Uruguay (UTC-3)
+      // Usamos toLocaleString para obtener la fecha/hora en timezone Uruguay
+      const nowUtc = new Date();
+      const uruguayTimeStr = nowUtc.toLocaleString('en-CA', { 
+        timeZone: 'America/Montevideo',
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      // Formato: "2026-02-06, 15:30:00"
+      const [ahoraDateStr, ahoraTimeStr] = uruguayTimeStr.split(', ');
+      const [ahoraYear, ahoraMonth, ahoraDay] = ahoraDateStr.split('-').map(Number);
+      const [ahoraHours, ahoraMinutes] = ahoraTimeStr.split(':').map(Number);
+      
+      // Crear timestamp de "ahora" en minutos desde epoch para comparación simple
+      const ahoraEnMinutos = (ahoraYear * 525600) + (ahoraMonth * 43800) + (ahoraDay * 1440) + (ahoraHours * 60) + ahoraMinutes;
       
       let horaFinalHours: number;
       let horaFinalMinutes: number;
@@ -62,57 +81,53 @@ export default async function handler(
       let fechaTurnoDay: number;
       let fechaTurno: string;
       
-      // Manejar diferentes formatos de hora
+      // Manejar diferentes formatos de hora (todas vienen en timezone Uruguay)
       if (patientData.horaFinal.includes('T')) {
-        // Formato ISO completo (ej: "2026-02-04T14:00:00") - usar fecha y hora completas
+        // Formato ISO completo (ej: "2026-02-04T14:00:00")
         const [datePart, timePart] = patientData.horaFinal.split('T');
         fechaTurno = datePart;
         const [year, month, day] = datePart.split('-').map(Number);
         fechaTurnoYear = year;
-        fechaTurnoMonth = month - 1; // Los meses en JS son 0-indexed
+        fechaTurnoMonth = month;
         fechaTurnoDay = day;
         [horaFinalHours, horaFinalMinutes] = timePart.split(':').map(Number);
       } else {
-        // Formato solo hora "HH:mm" o "HH:mm:ss" - usar fecha del campo fecha o de hoy
+        // Formato solo hora "HH:mm" o "HH:mm:ss"
         [horaFinalHours, horaFinalMinutes] = patientData.horaFinal.split(':').map(Number);
         
         if (patientData.fecha) {
           fechaTurno = patientData.fecha;
           const [year, month, day] = patientData.fecha.split('-').map(Number);
           fechaTurnoYear = year;
-          fechaTurnoMonth = month - 1;
+          fechaTurnoMonth = month;
           fechaTurnoDay = day;
         } else {
-          // Usar fecha de hoy
-          fechaTurnoYear = ahora.getFullYear();
-          fechaTurnoMonth = ahora.getMonth();
-          fechaTurnoDay = ahora.getDate();
-          fechaTurno = `${fechaTurnoYear}-${String(fechaTurnoMonth + 1).padStart(2, '0')}-${String(fechaTurnoDay).padStart(2, '0')}`;
+          // Usar fecha de hoy en Uruguay
+          fechaTurnoYear = ahoraYear;
+          fechaTurnoMonth = ahoraMonth;
+          fechaTurnoDay = ahoraDay;
+          fechaTurno = ahoraDateStr;
         }
       }
       
-      // Construir fecha/hora del turno usando componentes locales (evita problemas de timezone)
-      const horaFinalDate = new Date(fechaTurnoYear, fechaTurnoMonth, fechaTurnoDay, horaFinalHours, horaFinalMinutes, 0);
+      // Crear timestamp del turno en minutos para comparación simple
+      const turnoEnMinutos = (fechaTurnoYear * 525600) + (fechaTurnoMonth * 43800) + (fechaTurnoDay * 1440) + (horaFinalHours * 60) + horaFinalMinutes;
       
-      const diferenciaMin = Math.round((ahora.getTime() - horaFinalDate.getTime()) / 60000);
+      // Diferencia en minutos (positivo = turno ya pasó)
+      const diferenciaMin = ahoraEnMinutos - turnoEnMinutos;
       
       // Log para diagnóstico
-      console.log('🕐 Validación de turno:', {
+      console.log('🕐 Validación de turno (Uruguay):', {
         horaFinalRecibida: patientData.horaFinal,
         fechaRecibida: patientData.fecha,
-        fechaTurnoUsada: fechaTurno,
-        horaFinalParsed: `${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
-        ahoraLocal: ahora.toLocaleString('es-UY'),
-        horaFinalLocal: horaFinalDate.toLocaleString('es-UY'),
+        ahoraUruguay: `${ahoraDateStr} ${ahoraHours}:${String(ahoraMinutes).padStart(2, '0')}`,
+        turnoUruguay: `${fechaTurno} ${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
         diferenciaMin,
         turnoVencido: diferenciaMin > 5,
       });
       
-      // Margen de tolerancia de 5 minutos para evitar problemas de sincronización
-      const margenToleranciaMs = 5 * 60 * 1000; // 5 minutos
-      
-      // Verificar que haya pasado más del margen de tolerancia
-      if ((ahora.getTime() - horaFinalDate.getTime()) > margenToleranciaMs) {
+      // Margen de tolerancia de 5 minutos
+      if (diferenciaMin > 5) {
         const horaFormateada = `${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}`;
         const fechaFormateada = fechaTurno.split('-').reverse().join('/'); // "2026-02-04" -> "04/02/2026"
         console.log('❌ Turno vencido - rechazando paciente');
