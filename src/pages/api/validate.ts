@@ -123,11 +123,11 @@ export default async function handler(
         ahoraUruguay: `${ahoraDateStr} ${ahoraHours}:${String(ahoraMinutes).padStart(2, '0')}`,
         turnoUruguay: `${fechaTurno} ${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
         diferenciaMin,
-        turnoVencido: diferenciaMin > 5,
+        turnoVencido: diferenciaMin > 1,
       });
       
-      // Margen de tolerancia de 5 minutos
-      if (diferenciaMin > 5) {
+      // Margen de tolerancia de 1 minuto
+      if (diferenciaMin > 1) {
         const horaFormateada = `${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}`;
         const fechaFormateada = fechaTurno.split('-').reverse().join('/'); // "2026-02-04" -> "04/02/2026"
         console.log('❌ Turno vencido - rechazando paciente');
