@@ -266,7 +266,7 @@ export default function DisplayPage() {
             marginBottom: '1rem',
             fontWeight: 'bold',
             textTransform: 'uppercase',
-            textAlign: 'center',
+            textAlign: 'right',
             flexShrink: 0,
           }}>
             🔔 Pase a Box

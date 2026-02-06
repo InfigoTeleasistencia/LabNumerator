@@ -15,7 +15,6 @@ export default function ScanPage() {
   const [message, setMessage] = useState('');
   const [patientName, setPatientName] = useState('');
   const [sectorInfo, setSectorInfo] = useState('');
-  const [position, setPosition] = useState<number | null>(null);
   const [cedula, setCedula] = useState('');
 
   // Estado para panel de testing personalizado
@@ -154,24 +153,12 @@ export default function ScanPage() {
         );
         setMessage('¡Código validado correctamente!');
 
-        // Obtener posición en la cola del sector
-        const queueResponse = await axios.get('/api/queue/state');
-        const sectorId = response.data.patient.sector;
-        const sectorData = queueResponse.data.sectors[sectorId];
-
-        if (sectorData) {
-          const pos =
-            sectorData.waiting.findIndex((p: any) => p.code === code) + 1;
-          setPosition(pos);
-        }
-
         // Auto-reset después de 6 segundos
         setTimeout(() => {
           setStatus('idle');
           setMessage('');
           setPatientName('');
           setSectorInfo('');
-          setPosition(null);
           setCedula('');
         }, 6000);
       }
@@ -406,32 +393,6 @@ export default function ScanPage() {
                       </strong>
                     </div>
 
-                    {position !== null && (
-                      <div
-                        style={{
-                          padding: '1.25rem 2rem',
-                          background: '#E73C3E',
-                          color: 'white',
-                          borderRadius: '12px',
-                          minWidth: '140px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '0.875rem',
-                            opacity: 0.9,
-                            marginBottom: '0.25rem',
-                          }}
-                        >
-                          Posición
-                        </div>
-                        <strong
-                          style={{ fontSize: '1.5rem', display: 'block' }}
-                        >
-                          #{position}
-                        </strong>
-                      </div>
-                    )}
                   </div>
                 </div>
 

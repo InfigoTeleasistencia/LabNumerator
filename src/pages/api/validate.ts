@@ -52,45 +52,63 @@ export default async function handler(
 
     // Validar que la hora final del turno no haya pasado (aplica para todos los casos)
     if (patientData.horaFinal) {
-      // Obtener hora actual en Uruguay (UTC-3)
-      const ahoraUruguay = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' }));
+      // Obtener fecha/hora actual real (del servidor)
+      const ahora = new Date();
       
+      let horaFinalDate: Date;
       let horaFinalHours: number;
       let horaFinalMinutes: number;
+      let fechaTurno: string;
       
       // Manejar diferentes formatos de hora
       if (patientData.horaFinal.includes('T')) {
-        // Formato ISO completo - extraer solo la hora
-        const timePart = patientData.horaFinal.split('T')[1];
+        // Formato ISO completo (ej: "2026-02-04T14:00:00") - usar fecha y hora completas
+        const [datePart, timePart] = patientData.horaFinal.split('T');
+        fechaTurno = datePart;
         [horaFinalHours, horaFinalMinutes] = timePart.split(':').map(Number);
+        
+        // Construir la fecha/hora completa del turno (se interpreta como hora local del servidor)
+        horaFinalDate = new Date(`${datePart}T${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}:00`);
       } else {
-        // Formato solo hora "HH:mm" o "HH:mm:ss"
+        // Formato solo hora "HH:mm" o "HH:mm:ss" - usar fecha del campo fecha o de hoy
         [horaFinalHours, horaFinalMinutes] = patientData.horaFinal.split(':').map(Number);
+        
+        if (patientData.fecha) {
+          fechaTurno = patientData.fecha;
+        } else {
+          // Usar fecha de hoy
+          fechaTurno = ahora.toISOString().split('T')[0];
+        }
+        
+        // Construir hora final usando la fecha del turno
+        horaFinalDate = new Date(`${fechaTurno}T${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}:00`);
       }
       
-      // Construir hora final como fecha de hoy en Uruguay
-      const horaFinalUruguay = new Date(ahoraUruguay);
-      horaFinalUruguay.setHours(horaFinalHours, horaFinalMinutes, 0, 0);
+      const diferenciaMin = Math.round((ahora.getTime() - horaFinalDate.getTime()) / 60000);
       
       // Log para diagnóstico
-      console.log('🕐 Validación de hora (Uruguay):', {
+      console.log('🕐 Validación de turno:', {
         horaFinalRecibida: patientData.horaFinal,
+        fechaRecibida: patientData.fecha,
+        fechaTurnoUsada: fechaTurno,
         horaFinalParsed: `${horaFinalHours}:${String(horaFinalMinutes).padStart(2, '0')}`,
-        ahoraUruguay: ahoraUruguay.toLocaleTimeString('es-UY'),
-        horaFinalUruguay: horaFinalUruguay.toLocaleTimeString('es-UY'),
-        diferenciaMin: Math.round((ahoraUruguay.getTime() - horaFinalUruguay.getTime()) / 60000),
+        ahora: ahora.toISOString(),
+        horaFinalDate: horaFinalDate.toISOString(),
+        diferenciaMin,
+        turnoVencido: diferenciaMin > 5,
       });
       
       // Margen de tolerancia de 5 minutos para evitar problemas de sincronización
       const margenToleranciaMs = 5 * 60 * 1000; // 5 minutos
       
       // Verificar que haya pasado más del margen de tolerancia
-      if ((ahoraUruguay.getTime() - horaFinalUruguay.getTime()) > margenToleranciaMs) {
+      if ((ahora.getTime() - horaFinalDate.getTime()) > margenToleranciaMs) {
         const horaFormateada = `${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}`;
+        const fechaFormateada = fechaTurno.split('-').reverse().join('/'); // "2026-02-04" -> "04/02/2026"
         console.log('❌ Turno vencido - rechazando paciente');
         return res.status(400).json({
           error: 'Turno vencido',
-          errorDescription: `El horario de atención finalizó a las ${horaFormateada}. Por favor, solicite un nuevo turno.`,
+          errorDescription: `El horario de atención finalizó el ${fechaFormateada} a las ${horaFormateada}. Por favor, solicite un nuevo turno.`,
         });
       }
     }
