@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSocket } from '@/hooks/useSocket';
 import axios from 'axios';
@@ -209,9 +208,6 @@ export default function LabPage() {
                 </p>
               </div>
             </div>
-            <Link href="/" className="btn btn-secondary">
-              Volver al inicio
-            </Link>
           </div>
 
           {/* Notificación */}

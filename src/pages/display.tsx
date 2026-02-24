@@ -55,24 +55,45 @@ export default function DisplayPage() {
     return () => clearInterval(timer);
   }, [serverTimeOffset]);
 
-  // Función para reproducir sonido de notificación
+  // Función para reproducir sonido de campana
+  const playBellSound = (audioContext: AudioContext, startTime: number, frequency: number, volume: number) => {
+    // Una campana tiene múltiples armónicas que decaen a diferentes velocidades
+    const harmonics = [
+      { ratio: 1, gain: 1, decay: 1.5 },      // Fundamental
+      { ratio: 2, gain: 0.6, decay: 1.0 },    // 2da armónica
+      { ratio: 2.4, gain: 0.3, decay: 0.7 },  // Armónica no entera (típico de campanas)
+      { ratio: 3, gain: 0.2, decay: 0.5 },    // 3ra armónica
+      { ratio: 4.5, gain: 0.1, decay: 0.3 },  // Brillo metálico
+    ];
+    
+    harmonics.forEach(h => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.frequency.value = frequency * h.ratio;
+      osc.type = 'sine';
+      
+      // Ataque instantáneo, decay exponencial (como una campana real)
+      gain.gain.setValueAtTime(volume * h.gain, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + h.decay);
+      
+      osc.start(startTime);
+      osc.stop(startTime + h.decay + 0.1);
+    });
+  };
+
+  // Función para reproducir sonido de notificación (campanas ascendentes)
   const playNotificationSound = () => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
+      // 3 campanas ascendentes
+      playBellSound(audioContext, audioContext.currentTime, 698, 0.4);        // Fa (F5)
+      playBellSound(audioContext, audioContext.currentTime + 0.35, 880, 0.4); // La (A5)
+      playBellSound(audioContext, audioContext.currentTime + 0.70, 1047, 0.5); // Do (C6)
       
       console.log('🔊 Sonido de notificación reproducido en sala de espera');
     } catch (error) {
