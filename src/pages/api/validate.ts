@@ -110,6 +110,21 @@ export default async function handler(
         }
       }
       
+      const fechaHoy = ahoraDateStr; // "YYYY-MM-DD"
+
+      // Validar que el turno sea del día de hoy (no admitir turnos de otros días)
+      if (fechaTurno !== fechaHoy) {
+        const fechaFormateada = fechaTurno.split('-').reverse().join('/');
+        const esFuturo = fechaTurno > fechaHoy;
+        console.log(`❌ Turno de ${esFuturo ? 'fecha futura' : 'fecha pasada'} - rechazando paciente (turno: ${fechaTurno}, hoy: ${fechaHoy})`);
+        return res.status(400).json({
+          error: esFuturo ? 'Turno no disponible aún' : 'Turno vencido',
+          errorDescription: esFuturo
+            ? `Su turno es para el ${fechaFormateada}. Solo se admiten turnos del día de hoy.`
+            : `Su turno fue para el ${fechaFormateada}. Por favor, solicite un nuevo turno.`,
+        });
+      }
+
       // Crear timestamp del turno en minutos para comparación simple
       const turnoEnMinutos = (fechaTurnoYear * 525600) + (fechaTurnoMonth * 43800) + (fechaTurnoDay * 1440) + (horaFinalHours * 60) + horaFinalMinutes;
       
@@ -129,7 +144,7 @@ export default async function handler(
       // Margen de tolerancia de 1 minuto
       if (diferenciaMin > 1) {
         const horaFormateada = `${String(horaFinalHours).padStart(2, '0')}:${String(horaFinalMinutes).padStart(2, '0')}`;
-        const fechaFormateada = fechaTurno.split('-').reverse().join('/'); // "2026-02-04" -> "04/02/2026"
+        const fechaFormateada = fechaTurno.split('-').reverse().join('/');
         console.log('❌ Turno vencido - rechazando paciente');
         return res.status(400).json({
           error: 'Turno vencido',
