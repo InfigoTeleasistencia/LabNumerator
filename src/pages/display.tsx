@@ -12,7 +12,6 @@ export default function DisplayPage() {
   const [lastCalledPatientId, setLastCalledPatientId] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Sincronizar con la hora del servidor
@@ -57,21 +56,28 @@ export default function DisplayPage() {
     return () => clearInterval(timer);
   }, [serverTimeOffset]);
 
-  // Desbloquear audio con gesto del usuario (requerido por autoplay policy)
-  const unlockAudio = useCallback(() => {
+  // Inicializar AudioContext al montar el componente.
+  // Requiere que el navegador se lance con --autoplay-policy=no-user-gesture-required
+  useEffect(() => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
       audioCtxRef.current = ctx;
-      setAudioUnlocked(true);
-      console.log('🔊 [Display] Audio desbloqueado por interacción del usuario');
+      console.log('🔊 [Display] AudioContext inicializado, estado:', ctx.state);
+
+      if (ctx.state === 'suspended') {
+        console.warn(
+          '⚠️ [Display] AudioContext suspendido. ' +
+          'Verifique que el navegador fue lanzado con --autoplay-policy=no-user-gesture-required'
+        );
+      }
     } catch (error) {
-      console.error('❌ [Display] Error desbloqueando audio:', error);
+      console.error('❌ [Display] Error inicializando AudioContext:', error);
     }
+
+    return () => {
+      audioCtxRef.current?.close();
+      audioCtxRef.current = null;
+    };
   }, []);
 
   const playBellSound = useCallback((audioContext: AudioContext, startTime: number, frequency: number, volume: number) => {
@@ -409,61 +415,6 @@ export default function DisplayPage() {
             </div>
           )}
         </div>
-        {/* Overlay para activar audio (requerido por política de autoplay del navegador) */}
-        {!audioUnlocked && (
-          <div
-            onClick={unlockAudio}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.75)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 9999,
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{
-              background: 'white',
-              borderRadius: '20px',
-              padding: '3rem 4rem',
-              textAlign: 'center',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              maxWidth: '500px',
-            }}>
-              <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🔊</div>
-              <h2 style={{
-                fontSize: '2rem',
-                color: '#1f2937',
-                marginBottom: '1rem',
-                fontWeight: 'bold',
-              }}>
-                Activar Sonido
-              </h2>
-              <p style={{
-                fontSize: '1.25rem',
-                color: '#6b7280',
-                marginBottom: '2rem',
-                lineHeight: 1.5,
-              }}>
-                Toque la pantalla para activar las notificaciones de audio
-              </p>
-              <div style={{
-                background: 'linear-gradient(135deg, #3B9DD4 0%, #2C7DA0 100%)',
-                color: 'white',
-                padding: '1rem 2.5rem',
-                borderRadius: '12px',
-                fontSize: '1.25rem',
-                fontWeight: 'bold',
-                display: 'inline-block',
-              }}>
-                Toque aquí
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </>
   );
