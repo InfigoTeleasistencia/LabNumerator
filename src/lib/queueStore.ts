@@ -158,17 +158,17 @@ class QueueStore {
       return null;
     }
 
-    // Si hay un paciente actual en ESTE puesto específico, moverlo a completado
+    // Mover TODOS los pacientes llamados en este puesto a completado
+    // (puede haber más de uno si se usó re-llamar)
     if (puesto) {
-      // Buscar el paciente que está actualmente en este puesto
-      const currentPatientInPuesto = Array.from(this.patients.values())
-        .find(p => p.sector === sectorId && p.status === 'called' && p.puesto === puesto);
+      const calledInPuesto = Array.from(this.patients.values())
+        .filter(p => p.sector === sectorId && p.status === 'called' && p.puesto === puesto);
       
-      if (currentPatientInPuesto) {
-        currentPatientInPuesto.status = 'completed';
-        currentPatientInPuesto.completedAt = Date.now();
-        this.addToRecent(sectorId, currentPatientInPuesto.id);
-        console.log(`✅ Paciente ${currentPatientInPuesto.code} completado en Puesto ${puesto}`);
+      for (const pat of calledInPuesto) {
+        pat.status = 'completed';
+        pat.completedAt = Date.now();
+        this.addToRecent(sectorId, pat.id);
+        console.log(`✅ Paciente ${pat.code} completado en Puesto ${puesto}`);
       }
     }
 
@@ -257,6 +257,48 @@ class QueueStore {
   getCurrentPatientByPuesto(sectorId: string, puesto: number): Patient | null {
     return Array.from(this.patients.values())
       .find(p => p.sector === sectorId && p.status === 'called' && p.puesto === puesto) || null;
+  }
+
+  /**
+   * Re-llama a un paciente completado o expirado, poniéndolo de vuelta en estado "called".
+   * Completa primero al paciente actual del puesto para que vuelva a recientes.
+   */
+  recallPatient(patientId: string, sectorId: string, puesto: number): Patient | null {
+    const patient = this.patients.get(patientId);
+    if (!patient) return null;
+
+    if (patient.status !== 'completed' && patient.status !== 'expired') {
+      return null;
+    }
+
+    // Completar los pacientes que ya estaban llamados en este puesto
+    const calledInPuesto = Array.from(this.patients.values())
+      .filter(p => p.sector === sectorId && p.status === 'called' && p.puesto === puesto);
+
+    for (const pat of calledInPuesto) {
+      pat.status = 'completed';
+      pat.completedAt = Date.now();
+      this.addToRecent(sectorId, pat.id);
+      console.log(`✅ Paciente ${pat.code} completado en Puesto ${puesto} (por re-llamado)`);
+    }
+
+    // Ahora poner al paciente re-llamado como llamado
+    patient.status = 'called';
+    patient.calledAt = Date.now();
+    patient.puesto = puesto;
+    patient.completedAt = undefined;
+
+    // Removerlo de recientes (ya que ahora está siendo atendido)
+    const sector = this.sectors.get(sectorId);
+    if (sector) {
+      const idx = sector.recentPatients.indexOf(patientId);
+      if (idx > -1) {
+        sector.recentPatients.splice(idx, 1);
+      }
+    }
+
+    this.scheduleSave();
+    return patient;
   }
 
   hasPatient(code: string): boolean {

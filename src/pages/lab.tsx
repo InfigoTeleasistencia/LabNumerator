@@ -146,7 +146,31 @@ export default function LabPage() {
   };
 
 
-  const sectors = Object.keys(localQueueState.sectors);
+  const handleRecall = async (patientId: string) => {
+    if (isLoading || !selectedSector) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post('/api/queue/recall', {
+        patientId,
+        sectorId: selectedSector,
+        puesto: puestoNumber,
+      });
+
+      if (response.data.success) {
+        const patient = response.data.patient;
+        setNotification(`Re-llamando a: ${patient.name} (${patient.code}) - Puesto ${puestoNumber}`);
+        setTimeout(() => setNotification(null), 3000);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Error al re-llamar al paciente';
+      setNotification(errorMsg);
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const sectorData = selectedSector ? localQueueState.sectors[selectedSector] : null;
   
   // Obtener TODOS los pacientes llamados
@@ -161,11 +185,6 @@ export default function LabPage() {
   const recent = sectorData?.recent || [];
   
   console.log('🏥 [Lab] Puesto:', puestoNumber, '| Paciente actual:', current?.code || 'ninguno', '| Total llamados:', calledPatients.length);
-
-  // Calcular totales generales
-  const totalWaiting = sectors.reduce((sum, id) => sum + localQueueState.sectors[id].waiting.length, 0);
-  const totalCurrent = sectors.reduce((sum, id) => sum + (localQueueState.sectors[id].current ? 1 : 0), 0);
-  const totalRecent = sectors.reduce((sum, id) => sum + localQueueState.sectors[id].recent.length, 0);
 
   return (
     <>
@@ -255,14 +274,7 @@ export default function LabPage() {
             </div>
           )}
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '2rem',
-            marginBottom: '2rem',
-          }}>
-            {/* Paciente actual */}
-            <div className="card">
+          <div className="card" style={{ marginBottom: '2rem' }}>
               <h2 style={{
                 fontSize: '1.5rem',
                 marginBottom: '1.5rem',
@@ -314,97 +326,65 @@ export default function LabPage() {
               >
                 {isLoading ? 'Llamando...' : `Llamar Siguiente ${waiting.length > 0 ? `(${waiting.length} en espera)` : ''}`}
               </button>
-            </div>
+          </div>
 
-            {/* Estadísticas */}
-            <div className="card">
+          {/* Pacientes Recientes (re-llamar) */}
+          {recent.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
               <h2 style={{
-                fontSize: '1.5rem',
-                marginBottom: '1.5rem',
+                fontSize: '1.25rem',
+                marginBottom: '1rem',
                 color: '#1f2937',
               }}>
-                Estadísticas Generales
+                Pacientes Recientes
               </h2>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
-              }}>
-                <div style={{
-                  padding: '1.5rem',
-                  background: '#FFF5E6',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold',
-                    color: '#FCD116',
-                  }}>
-                    {totalWaiting}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {recent.map((patient) => (
+                  <div
+                    key={patient.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.75rem 1rem',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 'bold', color: '#1f2937' }}>
+                        {patient.code} — {patient.name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                        CI: {patient.cedula}
+                        {patient.completedAt && ` · Atendido: ${format(new Date(patient.completedAt), 'HH:mm:ss')}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRecall(patient.id)}
+                      disabled={isLoading}
+                      style={{
+                        marginLeft: '1rem',
+                        padding: '0.5rem 1rem',
+                        background: '#3B9DD4',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '0.875rem',
+                        opacity: isLoading ? 0.6 : 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Re-llamar
+                    </button>
                   </div>
-                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
-                    En Espera
-                  </div>
-                </div>
-
-                <div style={{
-                  padding: '1.5rem',
-                  background: '#E1F4FB',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold',
-                    color: '#3B9DD4',
-                  }}>
-                    {totalCurrent}
-                  </div>
-                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
-                    En Atención
-                  </div>
-                </div>
-
-                <div style={{
-                  padding: '1.5rem',
-                  background: '#d1fae5',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold',
-                    color: '#059669',
-                  }}>
-                    {totalRecent}
-                  </div>
-                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
-                    Atendidos
-                  </div>
-                </div>
-
-                <div style={{
-                  padding: '1.5rem',
-                  background: '#FCE8E9',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold',
-                    color: '#E73C3E',
-                  }}>
-                    {sectors.length}
-                  </div>
-                  <div style={{ color: '#1f2937', fontSize: '0.875rem', fontWeight: '600' }}>
-                    Sectores Activos
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Cola de espera */}
           {selectedSector && (
