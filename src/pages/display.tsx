@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { useSocket } from '@/hooks/useSocket';
 import { format } from 'date-fns';
@@ -12,6 +12,8 @@ export default function DisplayPage() {
   const [lastCalledPatientId, setLastCalledPatientId] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Sincronizar con la hora del servidor
   const syncServerTime = async () => {
@@ -55,15 +57,30 @@ export default function DisplayPage() {
     return () => clearInterval(timer);
   }, [serverTimeOffset]);
 
-  // Función para reproducir sonido de campana
-  const playBellSound = (audioContext: AudioContext, startTime: number, frequency: number, volume: number) => {
-    // Una campana tiene múltiples armónicas que decaen a diferentes velocidades
+  // Desbloquear audio con gesto del usuario (requerido por autoplay policy)
+  const unlockAudio = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      audioCtxRef.current = ctx;
+      setAudioUnlocked(true);
+      console.log('🔊 [Display] Audio desbloqueado por interacción del usuario');
+    } catch (error) {
+      console.error('❌ [Display] Error desbloqueando audio:', error);
+    }
+  }, []);
+
+  const playBellSound = useCallback((audioContext: AudioContext, startTime: number, frequency: number, volume: number) => {
     const harmonics = [
-      { ratio: 1, gain: 1, decay: 1.5 },      // Fundamental
-      { ratio: 2, gain: 0.6, decay: 1.0 },    // 2da armónica
-      { ratio: 2.4, gain: 0.3, decay: 0.7 },  // Armónica no entera (típico de campanas)
-      { ratio: 3, gain: 0.2, decay: 0.5 },    // 3ra armónica
-      { ratio: 4.5, gain: 0.1, decay: 0.3 },  // Brillo metálico
+      { ratio: 1, gain: 1, decay: 1.5 },
+      { ratio: 2, gain: 0.6, decay: 1.0 },
+      { ratio: 2.4, gain: 0.3, decay: 0.7 },
+      { ratio: 3, gain: 0.2, decay: 0.5 },
+      { ratio: 4.5, gain: 0.1, decay: 0.3 },
     ];
     
     harmonics.forEach(h => {
@@ -76,30 +93,34 @@ export default function DisplayPage() {
       osc.frequency.value = frequency * h.ratio;
       osc.type = 'sine';
       
-      // Ataque instantáneo, decay exponencial (como una campana real)
       gain.gain.setValueAtTime(volume * h.gain, startTime);
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + h.decay);
       
       osc.start(startTime);
       osc.stop(startTime + h.decay + 0.1);
     });
-  };
+  }, []);
 
-  // Función para reproducir sonido de notificación (campanas ascendentes)
-  const playNotificationSound = () => {
+  const playNotificationSound = useCallback(async () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = audioCtxRef.current;
+      if (!audioContext) {
+        console.warn('⚠️ [Display] AudioContext no inicializado, sonido omitido');
+        return;
+      }
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
       
-      // 3 campanas ascendentes
-      playBellSound(audioContext, audioContext.currentTime, 698, 0.4);        // Fa (F5)
-      playBellSound(audioContext, audioContext.currentTime + 0.35, 880, 0.4); // La (A5)
-      playBellSound(audioContext, audioContext.currentTime + 0.70, 1047, 0.5); // Do (C6)
+      playBellSound(audioContext, audioContext.currentTime, 698, 0.4);
+      playBellSound(audioContext, audioContext.currentTime + 0.35, 880, 0.4);
+      playBellSound(audioContext, audioContext.currentTime + 0.70, 1047, 0.5);
       
       console.log('🔊 Sonido de notificación reproducido en sala de espera');
     } catch (error) {
       console.error('Error playing sound:', error);
     }
-  };
+  }, [playBellSound]);
 
   // Cargar estado inicial
   useEffect(() => {
@@ -327,7 +348,7 @@ export default function DisplayPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: isLastCalled ? '1.25rem 2rem' : '0.75rem 1.5rem',
+                      padding: isLastCalled ? '1.25rem 2rem' : '0.875rem 1.5rem',
                       background: isLastCalled ? '#fff5f5' : '#f9fafb',
                       borderRadius: '12px',
                       border: isLastCalled ? '3px solid #E73C3E' : '2px solid #e5e7eb',
@@ -342,19 +363,21 @@ export default function DisplayPage() {
                     <div 
                       className={isLastCalled ? 'pulse' : ''}
                       style={{
-                        fontSize: isLastCalled ? '2.5rem' : '1.75rem',
+                        fontSize: isLastCalled ? '4.5rem' : '3rem',
                         color: 'white',
-                        fontWeight: 'bold',
-                        padding: isLastCalled ? '1rem 2rem' : '0.5rem 1.25rem',
+                        fontWeight: '800',
+                        padding: isLastCalled ? '1rem 2.5rem' : '0.75rem 1.5rem',
                         background: isLastCalled 
-                          ? 'linear-gradient(135deg, #E73C3E 0%, #C32F31 100%)' 
-                          : '#E73C3E',
+                          ? 'linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%)' 
+                          : 'linear-gradient(135deg, #E73C3E 0%, #C62828 100%)',
                         borderRadius: '10px',
                         boxShadow: isLastCalled 
-                          ? '0 6px 16px rgba(231, 60, 62, 0.4)' 
-                          : '0 3px 8px rgba(231, 60, 62, 0.3)',
-                        minWidth: isLastCalled ? '280px' : '220px',
+                          ? '0 6px 20px rgba(211, 47, 47, 0.5)' 
+                          : '0 4px 12px rgba(231, 60, 62, 0.35)',
+                        minWidth: isLastCalled ? '400px' : '320px',
                         textAlign: 'center',
+                        letterSpacing: '0.08em',
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                       }}
                     >
                       CI: {patient.cedula}
@@ -362,19 +385,21 @@ export default function DisplayPage() {
 
                     {/* Puesto */}
                     <div style={{
-                      fontSize: isLastCalled ? '2.5rem' : '1.75rem',
+                      fontSize: isLastCalled ? '4.5rem' : '3rem',
                       color: 'white',
-                      fontWeight: 'bold',
-                      padding: isLastCalled ? '1rem 2rem' : '0.5rem 1.25rem',
+                      fontWeight: '800',
+                      padding: isLastCalled ? '1rem 2.5rem' : '0.75rem 1.5rem',
                       background: isLastCalled 
-                        ? 'linear-gradient(135deg, #2C7DA0 0%, #1a5978 100%)' 
-                        : '#2C7DA0',
+                        ? 'linear-gradient(135deg, #1565C0 0%, #0D47A1 100%)' 
+                        : 'linear-gradient(135deg, #2C7DA0 0%, #1a5978 100%)',
                       borderRadius: '10px',
                       boxShadow: isLastCalled 
-                        ? '0 6px 16px rgba(44, 125, 160, 0.4)' 
-                        : '0 3px 8px rgba(44, 125, 160, 0.3)',
-                      minWidth: isLastCalled ? '200px' : '150px',
+                        ? '0 6px 20px rgba(21, 101, 192, 0.5)' 
+                        : '0 4px 12px rgba(44, 125, 160, 0.35)',
+                      minWidth: isLastCalled ? '280px' : '210px',
                       textAlign: 'center',
+                      letterSpacing: '0.05em',
+                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                     }}>
                       BOX {patient.puesto || '?'}
                     </div>
@@ -384,6 +409,61 @@ export default function DisplayPage() {
             </div>
           )}
         </div>
+        {/* Overlay para activar audio (requerido por política de autoplay del navegador) */}
+        {!audioUnlocked && (
+          <div
+            onClick={unlockAudio}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 9999,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '3rem 4rem',
+              textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              maxWidth: '500px',
+            }}>
+              <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🔊</div>
+              <h2 style={{
+                fontSize: '2rem',
+                color: '#1f2937',
+                marginBottom: '1rem',
+                fontWeight: 'bold',
+              }}>
+                Activar Sonido
+              </h2>
+              <p style={{
+                fontSize: '1.25rem',
+                color: '#6b7280',
+                marginBottom: '2rem',
+                lineHeight: 1.5,
+              }}>
+                Toque la pantalla para activar las notificaciones de audio
+              </p>
+              <div style={{
+                background: 'linear-gradient(135deg, #3B9DD4 0%, #2C7DA0 100%)',
+                color: 'white',
+                padding: '1rem 2.5rem',
+                borderRadius: '12px',
+                fontSize: '1.25rem',
+                fontWeight: 'bold',
+                display: 'inline-block',
+              }}>
+                Toque aquí
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );
