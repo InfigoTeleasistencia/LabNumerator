@@ -153,7 +153,15 @@ export default async function handler(
       }
     }
 
-    // Agregar a la cola del sector correspondiente
+    // Forzar sector único: ignorar el sector del servidor para que todos
+    // los pacientes caigan en la misma cola accesible por los laboratoristas.
+    const SECTOR_UNICO = 'LAB';
+    const SECTOR_UNICO_DESC = 'LABORATORIO';
+
+    if (patientData.sector.toString() !== SECTOR_UNICO) {
+      console.log(`🔀 Sector del servidor ignorado: ${patientData.sector} (${patientData.secDescripcion}) → ${SECTOR_UNICO} (${SECTOR_UNICO_DESC})`);
+    }
+
     const patient = queueStore.addPatient({
       id: `PAT-${Date.now()}`,
       code: patientData.code,
@@ -162,8 +170,8 @@ export default async function handler(
       matricula: patientData.matricula.toString(),
       usuario: patientData.usuario.toString(),
       dependencia: `${patientData.dependencia} - ${patientData.depDescripcion}`,
-      sector: patientData.sector.toString(),
-      sectorDescription: patientData.secDescripcion,
+      sector: SECTOR_UNICO,
+      sectorDescription: SECTOR_UNICO_DESC,
       fecha: patientData.fecha,
       horaInicial: patientData.horaInicial,
       horaFinal: patientData.horaFinal,
@@ -185,8 +193,8 @@ export default async function handler(
     return res.status(200).json({ 
       success: true,
       patient,
-      sector: patientData.secDescripcion,
-      message: `Paciente agregado al ${patientData.secDescripcion}`,
+      sector: SECTOR_UNICO_DESC,
+      message: `Paciente agregado a la cola`,
     });
   } catch (error) {
     console.error('Error in validation:', error);
